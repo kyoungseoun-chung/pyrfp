@@ -55,10 +55,7 @@ class TrainingBasis:
         # Device setup
         # Cuda status
         # Set device accordingly
-        if self.config["cuda"]:
-            self.device = torch.device("cuda")
-        else:
-            self.device = torch.device("cpu")
+        self.device = self.config["device"]
         self.dtype = self.config["dtype"]
 
         # Add data handler
@@ -188,6 +185,7 @@ class ParticleTraining(TrainingBasis):
 
             architecture = self.dl.read_state_dict(architecture, state_dict_loc)
 
+        architecture.to(self.device)
         architecture.train()
 
         return architecture

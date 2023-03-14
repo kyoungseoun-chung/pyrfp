@@ -7,8 +7,9 @@ It includes
     - FP
 """
 import torch
+from pymytools.constants import EPS0
+from pymytools.constants import PI
 from torch import Tensor
-from pymytools.constants import PI, EPS0
 
 
 def binary_nanbu(

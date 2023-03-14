@@ -7,6 +7,14 @@ from pyrfp.training import ParticleTraining
 from pyrfp.training_model import NLinearLayerModel
 from pyrfp.types import TrainingConfig
 
+DEVICE = (
+    torch.device("mps")
+    if torch.backends.mps.is_available()  # type: ignore
+    else torch.device("cuda")
+    if torch.cuda.is_available()
+    else torch.device("cpu")
+)
+
 CONFIG: TrainingConfig = {
     "data_dir": "./tests/test_data",
     "model_dir": "./tests/test_data",
@@ -32,7 +40,7 @@ CONFIG: TrainingConfig = {
     "dropout": 0.0,
     "n_batch": 1,
     "batch_norm": False,
-    "cuda": True if torch.cuda.is_available() else False,
+    "device": DEVICE,
     "restart": "model.pth",
     "data_chunk_size": 10,
     "tracker_overwrite": False,
@@ -64,7 +72,7 @@ def test_architecture() -> None:
     # Load state dict
     dl = DataLoader(
         dtype=CONFIG["dtype"],
-        device=torch.device("cuda") if CONFIG["cuda"] else torch.device("cpu"),
+        device=CONFIG["device"],
     )
     architecture = dl.read_state_dict(architecture, "./tests/test_data/model.pth")
 

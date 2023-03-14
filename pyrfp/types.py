@@ -55,7 +55,7 @@ class TrainingConfig(TypedDict):
     """Number of batches"""
     batch_norm: bool
     """If true, perform batch normalization."""
-    cuda: bool
+    device: torch.device
     """It true, use GPU"""
     restart: str | None
     """If string is given, restart is the name of pre-trained model. Start training from that model. If None, start from the beginning."""

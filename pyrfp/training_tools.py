@@ -181,9 +181,16 @@ class HDFTrainignDataHandler:
             ), f"DataHandler: chunk size ({chunk_size}) should be less than or equal to the column size of the given data ({column_size[0]})."
 
             if chunk_size > 0:
-                chunk = torch.randperm(column_size[0], device=self.device)[:chunk_size]
+                # chunk = torch.randperm(column_size[0], device=self.device)[:chunk_size]
+                chunk = torch.randperm(column_size[0], device=torch.device("cpu"))[
+                    :chunk_size
+                ]
+                chunk.to(self.device)
+
             else:
-                chunk = torch.randperm(column_size[0], device=self.device)
+                # chunk = torch.randperm(column_size[0], device=self.device)
+                chunk = torch.randperm(column_size[0], device=torch.device("cpu"))
+                chunk.to(self.device)
 
             inputs.append(self.get_data_by_chunk(i, "inputs", chunk))
             targets.append(self.get_data_by_chunk(t, "targets", chunk))
