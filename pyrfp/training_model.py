@@ -19,12 +19,13 @@ class NLinearLayerModel(torch.nn.Module):
 
     def __init__(
         self,
-        d_output: int = 9,
-        d_input: int = 12,
+        d_output: int = 12,
+        d_input: int = 8,
         d_hidden: list[int] = [128, 128],
         act_func: list[str] = ["tanh", "tanh"],
         batch_norm: bool = False,
         dropout_rate: float = 0.0,
+        dtype: torch.dtype = torch.float32,
     ):
         """Construct NLinearLayerModel.
 
@@ -55,7 +56,9 @@ class NLinearLayerModel(torch.nn.Module):
 
         # construct hidden layers
         for i_h in range(self.n_hidden):
-            self.hidden.append(torch.nn.Linear(self.layers[i_h], self.layers[i_h + 1]))
+            self.hidden.append(
+                torch.nn.Linear(self.layers[i_h], self.layers[i_h + 1], dtype=dtype)
+            )
 
         # convert to ModuleList. python list is not working here.
         self.hidden = torch.nn.ModuleList(self.hidden)
@@ -67,7 +70,7 @@ class NLinearLayerModel(torch.nn.Module):
             self.hidden_bn = torch.nn.ModuleList(self.hidden_bn)
 
         # prediction layer
-        self.predict = torch.nn.Linear(d_hidden[-1], d_output)
+        self.predict = torch.nn.Linear(d_hidden[-1], d_output, dtype=dtype)
 
         if self.dropout_rate > 0:
             # dropout

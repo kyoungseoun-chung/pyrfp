@@ -21,4 +21,5 @@ This code is part of my paper, Data-Driven Stochastic Particle Scheme for Collis
 
 - Personal project
   - `pymaxed` (for the Maximum Entropy Distribution)
-  - `pymytools` (miscellaneous tools including data IO)
+  - `pyapes` (for the field solver)
+  - `pymytools` (miscellaneous tools including data IO, logging, and progress bar)

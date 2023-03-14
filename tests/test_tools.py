@@ -11,7 +11,12 @@ DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 def test_training_tools() -> None:
+    """Test data is located in `tests/test_data`. Each test file has the data size of 10x8 for input and 10x12 for target."""
+
     dh = HDFTrainignDataHandler(DEVICE)
+
+    assert dh.is_cuda == torch.cuda.is_available()
+
     input_0_size = dh.get_data_size("./tests/test_data/input_0.h5", "inputs")
     target_0_size = dh.get_data_size("./tests/test_data/target_0.h5", "targets")
 

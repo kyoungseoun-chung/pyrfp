@@ -3,6 +3,7 @@
 from typing import Any
 
 import torch
+from pymytools.diagnostics import DataTracker
 from pymytools.progress import ProgressBar
 from torch.utils.data.dataloader import DataLoader
 
@@ -10,7 +11,6 @@ from pyrfp.model_tools import ensemble_de_dt
 from pyrfp.model_tools import ensemble_e
 from pyrfp.model_tools import LOSS_CUSTOM
 from pyrfp.training_tools import Metric
-from pyrfp.training_tools import TrainingTracker
 
 
 class Runner:
@@ -48,7 +48,7 @@ class Runner:
 
         self.tol = 1e-1
 
-    def run(self, desc: str, tracker: TrainingTracker) -> None:
+    def run(self, desc: str, tracker: DataTracker) -> None:
         """Run training or validation.
 
         Args:
@@ -111,12 +111,12 @@ class Runner:
             wiener = target[:, -3::]
 
             # NOTE: Need to add dm/dt
-            if self.loss_function_name == "d-epmse":
+            if self.loss_function_name == "depmse":
                 loss = self.compute_loss(data, prediction, target_coeffs)
             else:
                 loss = self.compute_loss(data, prediction, target_coeffs, wiener)
 
-            if self.loss_function_name == "d-epmse":
+            if self.loss_function_name == "depmse":
                 batch_accuracy_eng = ensemble_e(data, prediction).cpu().detach().numpy()
             else:
                 batch_accuracy_eng = (

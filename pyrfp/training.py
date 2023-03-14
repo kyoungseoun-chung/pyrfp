@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import torch
+from pymytools.diagnostics import DataLoader
 from pymytools.diagnostics import DataSaver
 from pymytools.diagnostics import DataTracker
 from pymytools.diagnostics import is_dir
@@ -14,6 +15,8 @@ from pymytools.logger import logging
 from pymytools.logger import markup
 from pymytools.logger import timer
 
+from pyrfp.model_tools import DEPMSE
+from pyrfp.model_tools import DMEPMSE
 from pyrfp.model_tools import set_loss_funcs
 from pyrfp.model_tools import set_lr_schedular
 from pyrfp.training_model import NLinearLayerModel
@@ -56,11 +59,14 @@ class TrainingBasis:
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
+        self.dtype = self.config["dtype"]
 
         # Add data handler
-        self.dh = HDFTrainignDataHandler(device=self.device)
+        self.dh = HDFTrainignDataHandler(device=self.device, dtype=self.dtype)
         # Add data saver
         self.ds = DataSaver(self.model_dir)
+        # Add data loader
+        self.dl = DataLoader(self.dtype, self.device)
 
         # Check number of workers for the trainloader
         self.num_workers = self.config["num_workers"]
@@ -160,6 +166,7 @@ class ParticleTraining(TrainingBasis):
             self.act_funcs,
             batch_norm=self.batch_norm,
             dropout_rate=self.dropout,
+            dtype=self.dtype,
         )
 
         if self.tr_restart is not None:
@@ -169,7 +176,7 @@ class ParticleTraining(TrainingBasis):
                 self.tr_restart, str
             ), "Training: restart option must be a model path"
 
-            state_dict_loc = str(Path(self.model_dir, Path(self.tr_restart)))
+            state_dict_loc = Path(self.model_dir, Path(self.tr_restart)).as_posix()
 
             logging.info(
                 markup(
@@ -179,9 +186,8 @@ class ParticleTraining(TrainingBasis):
                 )
             )
 
-            architecture.load_state_dict(torch.load(state_dict_loc))
+            architecture = self.dl.read_state_dict(architecture, state_dict_loc)
 
-        architecture = architecture.to(self.device)
         architecture.train()
 
         return architecture
@@ -232,14 +238,11 @@ class ParticleTraining(TrainingBasis):
 
         return schedular, start_after, update_every
 
-    def training(self):
-        """Training in nested manner. RandomAccessDatahandler causes
-        huge computational overhead for data-loading. Therefore, change the
-        approach to the nested training.
+    def excute(self) -> torch.nn.Module:
+        """Excute training.
 
-        Note:
-            - Always need to load validation data set!
-
+        Returns:
+            torch.nn.Module: trained model
         """
 
         logging.info(markup("Preparing training..."), "blue", "bold")
@@ -257,28 +260,19 @@ class ParticleTraining(TrainingBasis):
         n_tr_files = len(tr_input_list)
 
         # Check one of data's size
-        tr_data_size = self.dh.get_data_size(tr_input_list[0], "inputs")
+        tr_input_size = self.dh.get_data_size(tr_input_list[0], "inputs")
+        tr_target_size = self.dh.get_data_size(tr_target_list[0], "targets")
 
-        tr_in_size = tr_data_size[1]
-        tr_in_rows = tr_data_size[0]
+        tr_in_size = tr_input_size[1]
+        tr_in_rows = tr_input_size[0]
+        tr_out_size = tr_target_size[1]
 
         data_chunk = tr_in_rows if self.n_data_chunk is None else self.n_data_chunk
 
         # Validation data chunk size
         val_data_chunk = int(len(val_input_list) / n_tr_files * data_chunk)
 
-        # global model setting copied for simpler look
-        loss_func = self.loss["name"].lower()
-
-        try:
-            loss_options = self.loss["options"]
-        except KeyError:
-            loss_options = None
-
-        n_epochs = self.n_epochs
-
         # Construct architecture
-        # Not an elegant way. But working...
         architecture = self.build_architecture(tr_in_size, 9)
 
         # Optimizer
@@ -296,8 +290,8 @@ class ParticleTraining(TrainingBasis):
         draw_rule(character="-")
 
         # Check nn architecture.
-        logging.info(markup("checking NN network info...\n", "blue", "bold"))
-        # Architecture layer info
+        logging.info(markup("checking MLP architecture...\n", "blue", "bold"))
+        # Neural Net layer info
         print(architecture)
         # Optimizer info
         print(optimizer)
@@ -306,7 +300,7 @@ class ParticleTraining(TrainingBasis):
             schedular_name = self.tr_lr_schedular["name"]
             print(schedular_name + " (")
             for k, v in self.tr_lr_schedular["options"].items():
-                print(f"\t{k} : {v}")
+                print(f"    {k} : {v}")
             print(")")
         # Loss function info
         print(criterion)
@@ -317,12 +311,10 @@ class ParticleTraining(TrainingBasis):
 
         self.timer.start("ann")
 
-        count_tr = 0
-        count_val = 0
         saved = False
 
         try:
-            for epoch in range(n_epochs):
+            for epoch in range(self.n_epochs):
                 print("")
 
                 tr_inputs, tr_targets = self.dh.get_input_target_from_dir(
@@ -352,9 +344,10 @@ class ParticleTraining(TrainingBasis):
                 )
 
                 # Need better idea...
-                if loss_func == "d-epmse":
+                if self.loss["name"] == "depmse" or self.loss["name"] == "dmepmse":
                     # Update factors (and skip epoch == 0)
                     if epoch % self.loss["options"]["update_every"] == 0 and epoch > 1:
+                        assert isinstance(criterion, DEPMSE | DMEPMSE)
                         criterion.update_weight()
 
                     # Double check..
@@ -368,21 +361,37 @@ class ParticleTraining(TrainingBasis):
 
                 # Training starts!
                 self.tracker.set_stage(Stages.TRAIN)
-                training_runner.run(f"TRAIN |{epoch+1}/{n_epochs}|", self.tracker)
+                training_runner.run(f"TRAIN |{epoch+1}/{self.n_epochs}|", self.tracker)
 
                 self.tracker.set_stage(Stages.VAL)
-                validation_runner.run(f"VALID |{epoch+1}/{n_epochs}|", self.tracker)
+                validation_runner.run(
+                    f"VALID |{epoch+1}/{self.n_epochs}|", self.tracker
+                )
 
-                count_tr = training_runner.run_count
-                count_val = validation_runner.run_count
+                self.tracker.set_stage(Stages.NORMAL)
+                self.tracker.add_epoch_metric(
+                    "tr_count", training_runner.run_count, epoch
+                )
+                self.tracker.add_epoch_metric(
+                    "val_count", validation_runner.run_count, epoch
+                )
 
                 # schedular resides outside since this is nested training
                 # after 30% of n_epochs, decay learning rate
-                if epoch > int(n_epochs * schedular_start_after):
+                if epoch > int(self.n_epochs * schedular_start_after):
                     # decay every 10 epochs
                     if epoch % schedular_update_every == 0 and schedular is not None:
                         print("")
                         schedular.step()
+
+                # Save model during epoch
+                # If self.config["save_every"] < 0, model will not be saved
+                if (
+                    epoch % self.config["save_every"] == 0
+                    and epoch != 0
+                    and self.config["save_every"] > 0
+                ):
+                    self.ds.save_model(architecture, f"model_{epoch}")
 
         except KeyboardInterrupt:
             saved = self.finalize(architecture)
@@ -390,12 +399,14 @@ class ParticleTraining(TrainingBasis):
         if saved is False:
             self.finalize(architecture)
 
+        return architecture
+
     def finalize(self, architecture: torch.nn.Module) -> bool:
         """Finalize the training."""
 
         # Save model in case of keyboard interruption
         # In this case, model will be saved as "model.pth"
-        self.ds.save_model(architecture, "model.pth")
+        self.ds.save_model(architecture, "model")
 
         self.timer.end("ann")
         elapsed_time = self.timer.elapsed("ann")

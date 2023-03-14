@@ -597,7 +597,7 @@ matplotlib = ">=3.6.0,<4.0.0"
 
 [[package]]
 name = "pymytools"
-version = "0.1.2"
+version = "0.1.5"
 description = "Tools used in my pystops project."
 category = "main"
 optional = false
@@ -933,7 +933,7 @@ test = ["pytest (>=3.0.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "98890fb938586f9a232b36714ce1dca8f96c96fddebad83ac0aa3caac45f7cff"
+content-hash = "6993e86f87d0a6196dfe5e15edefcec9392502df0d9faefb45ecd6c598f94c0b"
 
 [metadata.files]
 absl-py = [
@@ -1647,8 +1647,8 @@ pymyplot = [
     {file = "pymyplot-0.2.7.tar.gz", hash = "sha256:bd5391237e59f7869db1b585ea084720121514076d90f6af49f0b233ec4556e6"},
 ]
 pymytools = [
-    {file = "pymytools-0.1.2-py3-none-any.whl", hash = "sha256:21ed4c229ee62fa9f7438e4bc62a37480f23fce38c166af6b4442bf9dd1467f8"},
-    {file = "pymytools-0.1.2.tar.gz", hash = "sha256:d689ce7f5befac7615b76ab92541dd13523ea89094ad873a1a0dbf1cf00dda52"},
+    {file = "pymytools-0.1.5-py3-none-any.whl", hash = "sha256:cecd27e4b79b2367c4dc4c5f695da21890b495ee6620a63870da7d925436a869"},
+    {file = "pymytools-0.1.5.tar.gz", hash = "sha256:c8c96505b8707dea11295d3679df404e41376d0317ec5876fe58c254b0c5c2a4"},
 ]
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},

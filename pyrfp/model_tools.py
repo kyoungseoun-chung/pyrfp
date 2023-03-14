@@ -96,6 +96,8 @@ def set_lr_schedular(
         if schedular == "exp_lr":
             gamma = opts["gamma"]
 
+            assert gamma is not None, "Model tools: gamma is not set!"
+
             lr_schedular = ExponentialLR(
                 optimizer=optimizer, gamma=gamma, verbose=verbose
             )
@@ -117,7 +119,7 @@ def set_lr_schedular(
     return lr_schedular
 
 
-class signedMSELoss(torch.nn.Module):
+class signedMSE(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -125,7 +127,9 @@ class signedMSELoss(torch.nn.Module):
         return _signed_MSELoss(pred, target)
 
 
-class asymmetricLinearMSELoss(torch.nn.Module):
+class ALMSE(torch.nn.Module):
+    """Asymmetric linear MSE loss function."""
+
     def __init__(self):
         super().__init__()
 
@@ -146,7 +150,9 @@ class asymmetricLinearMSELoss(torch.nn.Module):
         return msg
 
 
-class asymmetricEnergyPreservingMSELoss(torch.nn.Module):
+class AEPMSE(torch.nn.Module):
+    """Asymmetric energy preserving loss function."""
+
     def __init__(self):
         super().__init__()
 
@@ -179,9 +185,10 @@ class asymmetricEnergyPreservingMSELoss(torch.nn.Module):
         return msg
 
 
-class energyPreservingVIBLoss(torch.nn.Module):
-    """Same energy preserving loss for the variational information
-    bottleneck (VIB) model."""
+class EPVIB(torch.nn.Module):
+    """Energy preserving VIB loss function.
+    Same energy preserving loss for the variational information bottleneck (VIB) model.
+    """
 
     def __init__(self):
         super().__init__()
@@ -223,7 +230,9 @@ class energyPreservingVIBLoss(torch.nn.Module):
         return loss_mse + self.weight_info * loss_info + self.weight_de_dt * loss_de_dt
 
 
-class energyPreservingMSELoss(torch.nn.Module):
+class EPMSE(torch.nn.Module):
+    """Energy preserving MSE loss."""
+
     def __init__(self):
         super().__init__()
 
@@ -256,8 +265,8 @@ class energyPreservingMSELoss(torch.nn.Module):
         return msg
 
 
-class deterministicEnergyPreservingMSELoss(torch.nn.Module):
-    """Energy preserving loss."""
+class DEPMSE(torch.nn.Module):
+    """Deterministic Energy preserving MSE loss."""
 
     def __init__(self):
         super().__init__()
@@ -296,8 +305,8 @@ class deterministicEnergyPreservingMSELoss(torch.nn.Module):
         return msg
 
 
-class deterministicMomentumEnergyPreservingMSELoss(torch.nn.Module):
-    """Energy preserving loss."""
+class DMEPMSE(torch.nn.Module):
+    """Deterministic momentum and energy preserging MSE loss function."""
 
     def __init__(self):
         super().__init__()
@@ -432,17 +441,17 @@ LOSS_TYPES = {
     "mse": torch.nn.MSELoss(),
     "l1": torch.nn.L1Loss(),
     "sl1": torch.nn.SmoothL1Loss(),
-    "signedmse": signedMSELoss(),
-    "almse": asymmetricLinearMSELoss(),
-    "epmse": energyPreservingMSELoss(),
-    "a-epmse": asymmetricEnergyPreservingMSELoss(),
-    "epvib": energyPreservingVIBLoss(),
-    "d-epmse": deterministicEnergyPreservingMSELoss(),
-    "d-mepmse": deterministicMomentumEnergyPreservingMSELoss(),
+    "signedmse": signedMSE(),
+    "almse": ALMSE(),
+    "epmse": EPMSE(),
+    "aepmse": AEPMSE(),
+    "epvib": EPVIB(),
+    "depmse": DEPMSE(),
+    "dmepmse": DMEPMSE(),
 }
 """Interface for the loss function."""
 
-LOSS_CUSTOM = ["epmse", "a-epmse", "d-epmse", "d-mepmse"]
+LOSS_CUSTOM = ["epmse", "aepmse", "depmse", "dmepmse"]
 """List of custom loss function."""
 
 ACT_F_TYPES: dict[str, Callable] = {

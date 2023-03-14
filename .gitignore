@@ -162,3 +162,5 @@ cython_debug/
 tests/test_data
 .vscode
 .DS_Store
+
+tests/test_data/run

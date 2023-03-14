@@ -2,11 +2,13 @@
 """Collection of custom types used in `pyrfp`."""
 from typing import TypedDict
 
+import torch
+
 
 class LRSchedularOptions(TypedDict):
     t_max: int
     eta_min: float
-    gamma: float
+    gamma: float | None
     verbose: bool
     start_after: int
     update_every: int
@@ -63,3 +65,7 @@ class TrainingConfig(TypedDict):
     """If true, Tensorboard will overwrite tracker."""
     num_workers: int
     """Number of CPUs for trainloader."""
+    save_every: int
+    """Save model at every `save_every` epochs."""
+    dtype: torch.dtype
+    """Data type for training."""

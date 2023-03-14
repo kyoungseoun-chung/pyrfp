@@ -42,6 +42,7 @@ class Stages(Enum):
 
     TRAIN = auto()
     VAL = auto()
+    NORMAL = auto()
 
 
 class TrainingTracker(Protocol):
@@ -79,9 +80,10 @@ def training_summary(config: TrainingConfig) -> None:
 class HDFTrainignDataHandler:
     device: torch.device = torch.device("cpu")
     """Device to use for data loading."""
+    dtype: torch.dtype = torch.float32
 
     def __post_init__(self) -> None:
-        self.dl = DataLoader(device=self.device)
+        self.dl = DataLoader(device=self.device, dtype=self.dtype)
         """Data loader. Dtype of the returned data is `torch.float64` and device is `self.device`."""
 
     @property
