@@ -172,19 +172,19 @@ class HDFTrainignDataHandler:
         targets: list[Tensor] = []
 
         for i, t in zip(input_list[:n_files], target_list[:n_files]):
-            colmum_size = self.get_data_size(i, "inputs")
+            column_size = self.get_data_size(i, "inputs")
 
             assert (
-                chunk_size <= colmum_size[0]
-            ), f"DataHandler: chunk size ({chunk_size}) should be less than or equal to the column size of the given data ({colmum_size[0]})."
+                chunk_size <= column_size[0]
+            ), f"DataHandler: chunk size ({chunk_size}) should be less than or equal to the column size of the given data ({column_size[0]})."
 
             if chunk_size > 0:
-                chunk = torch.randperm(n_files, device=self.device)[:chunk_size]
+                chunk = torch.randperm(column_size[0], device=self.device)[:chunk_size]
             else:
-                chunk = torch.randperm(n_files, device=self.device)
+                chunk = torch.randperm(column_size[0], device=self.device)
 
-            inputs.append(self.get_data_by_chunk(i, "input", chunk))
-            targets.append(self.get_data_by_chunk(t, "target", chunk))
+            inputs.append(self.get_data_by_chunk(i, "inputs", chunk))
+            targets.append(self.get_data_by_chunk(t, "targets", chunk))
 
         return torch.vstack(inputs), torch.vstack(targets)
 
