@@ -13,6 +13,14 @@ This code is part of my paper, Data-Driven Stochastic Particle Scheme for Collis
 
 - Preprint is available at [SSRN](https://ssrn.com/abstract=4108990)
 
+## Installation
+
+You can install via `pip`
+
+```bash
+$python3 -m pip install pyrfp
+```
+
 ## Dependencies
 
 - Global
