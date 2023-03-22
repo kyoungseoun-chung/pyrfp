@@ -13,6 +13,14 @@ This code is part of my paper, Data-Driven Stochastic Particle Scheme for Collis
 
 - Preprint is available at [SSRN](https://ssrn.com/abstract=4108990)
 
+## Features
+
+- Data generation
+  - Uncertainty quantification using the maximum entropy distribution (using `pymaxed`)
+  - Axisymmetric evaluation of the Rosenbluth potentials and their derivatives
+- Data training: supports `cpu`, `cuda`, and `mps` training
+- Data-driven simulation: `rfp-ann`
+
 ## Installation
 
 You can install via `pip`

@@ -3,6 +3,43 @@
 from typing import TypedDict
 
 import torch
+from torch import Tensor
+
+
+class Potentials(TypedDict):
+    """Collection of potentials and their derivatives."""
+
+    H: Tensor
+    """Rosenbluth H potential."""
+    jacH: Tensor
+    """Jacobian of the H potential."""
+    G: Tensor
+    """Rotational G potential."""
+    jacG: Tensor
+    """Jacobian of the G potential."""
+    hessG: Tensor
+    """Hessian of the H potential."""
+
+
+class PotentialReturnType(TypedDict):
+    pots: Potentials | None
+    success: bool
+
+
+class OptimizerConfig(TypedDict):
+    lr: float
+    max_iter: int | None
+    gtol: float
+    xtol: float
+
+
+class SolverConfig(TypedDict):
+    ...
+
+
+class PotentialConfig(TypedDict):
+    optimizer: OptimizerConfig
+    solver: SolverConfig
 
 
 class LRSchedularOptions(TypedDict):

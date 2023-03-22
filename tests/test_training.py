@@ -18,7 +18,7 @@ DEVICE = (
 CONFIG: TrainingConfig = {
     "data_dir": "./tests/test_data",
     "model_dir": "./tests/test_data",
-    "n_epochs": 11,
+    "n_epochs": 1,
     "layers": [10, 10, 10],
     "act_funcs": ["relu", "tanh", "elu"],
     "lr": 0.001,
@@ -82,5 +82,10 @@ def test_architecture() -> None:
 
 
 def test_training() -> None:
+    training = ParticleTraining(CONFIG)
+    training.excute()
+
+    # Run once for for CPU
+    CONFIG["device"] = torch.device("cpu")
     training = ParticleTraining(CONFIG)
     training.excute()

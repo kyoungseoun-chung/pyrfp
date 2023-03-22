@@ -37,7 +37,7 @@ def test_training_tools() -> None:
         assert i_file in input_list_target
         assert t_file in target_list_target
 
-    dl = DataLoader(device=DEVICE)
+    dl = DataLoader(device=DEVICE, dtype=torch.float32)
     chunk_size = 5
     chunk = torch.randperm(10, device=DEVICE)[:chunk_size]
 
