@@ -22,6 +22,8 @@ class Potentials(TypedDict):
     """Jacobian of the G potential."""
     hessG: Hess
     """Hessian of the H potential."""
+    pdf: Tensor
+    """Target distribution."""
 
 
 class PotentialReturnType(TypedDict):

@@ -7,127 +7,12 @@ import numpy as np
 import torch
 from pyapes.core.geometry import Cylinder
 from pyapes.core.mesh import Mesh
+from pymytools.diagnostics import DataLoader
 from pymytools.logger import Report
 from scipy.special import ellipe as s_ellipe
 from scipy.special import ellipk as s_ellipk
 from torch import Tensor
-from torch import vmap
 from torch.testing import assert_close
-
-
-def test_naive_loops() -> None:
-    nx = 5
-    ny = 10
-
-    x = torch.linspace(0, 2, nx, dtype=torch.float64)
-    y = torch.linspace(-2, 1, ny, dtype=torch.float64)
-
-    grid = torch.meshgrid(x, y, indexing="ij")
-
-    tic = time.perf_counter()
-    res_naive = _naive_for_loop(grid)
-    t_naive = time.perf_counter() - tic
-
-    tic = time.perf_counter()
-    res_vector_1 = _vectorized_for_loop_1(grid)
-    t_vector_1 = time.perf_counter() - tic
-
-    tic = time.perf_counter()
-    res_vector_2 = _vectorized_for_loop_2(grid)
-    t_vector_2 = time.perf_counter() - tic
-
-    tic = time.perf_counter()
-    res_vector_3 = _vectorized_for_loop_3(grid)
-    t_vector_3 = time.perf_counter() - tic
-
-    assert_close(res_naive, res_vector_1)
-    assert_close(res_naive, res_vector_2)
-    assert_close(res_naive, res_vector_3)
-
-    data = {
-        "Schemes": ["Naive sum", "Loop sum", "Copied sum", "Vmap sum"],
-        "Elapsed time (s)": [t_naive, t_vector_1, t_vector_2, t_vector_3],
-    }
-
-    report = Report("Time comparison", data, ["center", "left"], ["blue", "red"])
-    report.display()
-
-
-def _vectorized_for_loop_3(grid: tuple[Tensor, Tensor]) -> Tensor:
-    x = grid[0]
-    y = grid[1]
-    dx = grid[0][1, 0] - grid[0][0, 0]
-    dy = grid[1][0, 1] - grid[1][0, 0]
-
-    v_func_x = vmap(lambda t: torch.sum((t + x) ** 2))
-    v_func_y = vmap(lambda t: torch.sum((t - y) ** 2))
-
-    return (
-        (v_func_x(x.flatten()).view(*x.shape) + v_func_y(y.flatten()).view(*y.shape))
-        * dx
-        * dy
-    )
-
-
-def _vectorized_for_loop_2(grid: tuple[Tensor, Tensor]) -> Tensor:
-    x = grid[0]
-    y = grid[1]
-    dx = grid[0][1, 0] - grid[0][0, 0]
-    dy = grid[1][0, 1] - grid[1][0, 0]
-
-    nx = grid[0].shape[0]
-    ny = grid[0].shape[1]
-
-    x_field = x.flatten().repeat(nx, ny, 1)
-    y_field = y.flatten().repeat(nx, ny, 1)
-
-    dim = 2
-    re_dim = [1 for _ in range(dim)]
-    # Add one dimension to the last and repeat it
-    x = x.unsqueeze(dim).repeat(*re_dim, nx * ny)
-    y = y.unsqueeze(dim).repeat(*re_dim, nx * ny)
-
-    return torch.sum(((x_field + x) ** 2 + (y_field - y) ** 2) * dx * dy, dim=dim)
-
-
-def _vectorized_for_loop_1(grid: tuple[Tensor, Tensor]) -> Tensor:
-    x = grid[0]
-    y = grid[1]
-    dx = grid[0][1, 0] - grid[0][0, 0]
-    dy = grid[1][0, 1] - grid[1][0, 0]
-
-    nx = grid[0].shape[0]
-    ny = grid[0].shape[1]
-
-    res = torch.zeros_like(x)
-
-    for i in range(nx):
-        for j in range(ny):
-            res[i, j] = torch.sum((x[i, j] + x) ** 2 + (y[i, j] - y) ** 2) * dx * dy
-
-    return res
-
-
-def _naive_for_loop(grid: tuple[Tensor, Tensor]) -> Tensor:
-    x = grid[0]
-    y = grid[1]
-    dx = grid[0][1, 0] - grid[0][0, 0]
-    dy = grid[1][0, 1] - grid[1][0, 0]
-
-    nx = grid[0].shape[0]
-    ny = grid[0].shape[1]
-
-    res = torch.zeros_like(x)
-
-    for i in range(nx):
-        for j in range(ny):
-            for n in range(nx):
-                for m in range(ny):
-                    res[i, j] += (
-                        ((x[i, j] + x[n, m]) ** 2 + (y[i, j] - y[n, m]) ** 2) * dx * dy
-                    )
-
-    return res
 
 
 def naive_analytic_potential_numpy(
@@ -261,7 +146,7 @@ def test_potential_boundary() -> None:
     from pyrfp.training_data import get_analytic_bcs
     from pymytools.logger import timer
 
-    n_grid = [64, 128]
+    n_grid = [32, 64]
 
     if torch.backends.mps.is_available():  # type: ignore
         device = "mps"
@@ -295,7 +180,67 @@ def test_potential_boundary() -> None:
     get_analytic_bcs(mesh, pdf, "H")
     get_analytic_bcs(mesh, pdf, "G")
     timer.end("cpu")
-    pass
+
+    dl = DataLoader()
+    target = dl.read_hdf5(
+        "./tests/test_data/pot_bcs.h5",
+        ["h_top", "h_bottom", "h_right", "g_top", "g_bottom", "g_right", "pdf"],
+    )
+    h_bcs = get_analytic_bcs(mesh, target["pdf"], "H")
+    g_bcs = get_analytic_bcs(mesh, target["pdf"], "G")
+
+    assert_close(h_bcs["zu"], target["h_top"])
+    assert_close(h_bcs["zl"], target["h_bottom"])
+    assert_close(h_bcs["ru"][1:-1], target["h_right"])
+
+    assert_close(g_bcs["zu"], target["g_top"])
+    assert_close(g_bcs["zl"], target["g_bottom"])
+    assert_close(g_bcs["ru"][1:-1], target["g_right"])
+
+
+def test_mnts_to_potential() -> None:
+    from pyrfp.training_data import RosenbluthPotentials_RZ, analytic_potentials_rz_cpu
+
+    dl = DataLoader()
+
+    mesh = Mesh(Cylinder[0:5, -5:5], None, [32, 64])
+
+    mnts_eq = torch.tensor(
+        [1, 0, 1, 0, 3, 2, 8, 0, 2], dtype=mesh.dtype.float, device=mesh.device
+    )
+
+    RP_rz = RosenbluthPotentials_RZ(
+        mesh,
+        optimizer_config={
+            "lr": 1.0,
+            "max_iter": 200,
+            "gtol": 1e-6,
+            "xtol": 1e-6,
+        },
+        solver_config={
+            "method": "bicgstab",
+            "tol": 1e-8,
+            "max_it": 1000,
+            "report": False,
+        },
+    )
+
+    pots_mnts = RP_rz.from_moments(mnts_eq)["pots"]
+
+    assert pots_mnts is not None
+
+    target = dl.read_hdf5(
+        "./tests/test_data/mnts2pot.h5",
+        ["mnts", "coeffs", "H", "jacH", "G", "jacG", "hessG", "pdf"],
+    )
+    H_exact = analytic_potentials_rz_cpu(mesh.grid, mesh.grid, target["pdf"], "H")
+    G_exact = analytic_potentials_rz_cpu(mesh.grid, mesh.grid, target["pdf"], "G")
+
+    assert_close(pots_mnts["H"], H_exact, atol=1e-1, rtol=1e-1)
+    assert_close(pots_mnts["G"], G_exact, atol=1e-1, rtol=1e-1)
+
+    assert_close(pots_mnts["H"], target["H"], atol=1e-1, rtol=1e-1)
+    assert_close(pots_mnts["G"], target["G"], atol=1e-1, rtol=1e-1)
 
 
 def test_potential_field_solver() -> None:
@@ -316,12 +261,3 @@ def test_potential_field_solver() -> None:
     res = RP_rz.from_pdf(pdf)
     t_H = analytic_potentials_rz(mesh.grid, mesh.grid, pdf, "H")
     t_G = analytic_potentials_rz(mesh.grid, mesh.grid, pdf, "G")
-
-    assert res["pots"] is not None
-
-    assert_close(res["pots"]["H"], t_H, atol=1e-1, rtol=1e-1)
-    assert_close(res["pots"]["G"], t_G, atol=1e-1, rtol=1e-1)
-
-    # 32 x 64 is too coarse for the gradient
-    # jac_tH = torch.gradient(t_H, spacing=mesh.dx.tolist(), edge_order=2)
-    # assert_close(res["pots"]["jacH"].r, jac_tH[0], atol=1e-1, rtol=1e-1)

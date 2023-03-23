@@ -22,11 +22,16 @@ The performance of the abovementioned approaches are following:
     │  Vmap sum  │ 0.009342916077002883 │
     └────────────┴──────────────────────┘
 
+Note:
+    - Above performance results are illusion. `vmap` works very well for the native torch functions but not for my `ellipe` and `ellipk` functions (from `pymytools`).
+    - Therefore, we will use `Reshaped sum` approach for the computation of the potential boundary conditions.
+
 Therefore, we decided to use the vmap approach for the computation of the boundary conditions.
 """
 from dataclasses import dataclass
 from math import pi
 
+import pymaxed
 import torch
 from pyapes.core.mesh import Mesh
 from pyapes.core.solver.fdm import FDM
@@ -77,7 +82,7 @@ class RosenbluthPotentials_RZ:
 
         self.timer = Timer()
 
-    def from_mnts(self, mnts: Tensor) -> PotentialReturnType:
+    def from_moments(self, mnts: Tensor) -> PotentialReturnType:
         """From moment, obtain the maximum entropy distribution (maxed)"""
 
         assert (
@@ -87,6 +92,23 @@ class RosenbluthPotentials_RZ:
         assert (
             self.solver_config is not None
         ), "RosenbluthPotential_rz: solver config is not provided."
+
+        logging.info(
+            markup(
+                f"🚀 Computing Maximum Entropy Distribution  🚀",
+                "red",
+                "italic",
+            )
+            + f" (pymaxed v {pymaxed.__version__})"
+        )
+        logging.info("Target moment: " + markup(f" {mnts}", "blue"))
+        logging.info(
+            "Domain: "
+            + markup(
+                f" {self.mesh.lower.tolist()} x {self.mesh.upper.tolist()}", "blue"
+            )
+        )
+        logging.info("Grid: " + markup(f" {list(self.mesh.nx)}", "blue"))
 
         vec = Vec(self.mesh, mnts, 4, [50, 100])
         maxed = Maxed(
@@ -98,14 +120,24 @@ class RosenbluthPotentials_RZ:
             disp=False,
         )
 
+        logging.info(markup("Solving for MaxEd...", "yellow"))
         self.timer.start("maxed")
         maxed.solve()
         self.timer.end("maxed")
-
+        logging.info(
+            "🔥Done in " + markup(f"{self.timer.elapsed('maxed'):.2f} s", "blue")
+        )
         if not maxed.success:
             return {"pots": None, "success": False, "timer": None}
 
         pdf = maxed.dist_from_coeffs()
+
+        # Density correction
+        dr = self.mesh.grid[0][1, 0] - self.mesh.grid[0][0, 0]
+        dz = self.mesh.grid[1][0, 1] - self.mesh.grid[1][0, 0]
+
+        density = torch.sum(2.0 * torch.pi * self.mesh.grid[0] * pdf) * dr * dz
+        pdf /= density
 
         return self.from_pdf(pdf)
 
@@ -137,10 +169,11 @@ class RosenbluthPotentials_RZ:
 
         logging.info(
             markup(
-                f"🚀 Computing Rosenbluth potentials ssssss🚀",
-                style="italic",
+                f"🚀 Computing Rosenbluth potentials s🚀",
+                "red",
+                "italic",
             )
-            + f" (pyrfp v{__version__})"
+            + f" (pyrfp v {__version__})"
         )
         logging.info(
             "Domain: "
@@ -148,7 +181,7 @@ class RosenbluthPotentials_RZ:
                 f" {self.mesh.lower.tolist()} x {self.mesh.upper.tolist()}", "blue"
             )
         )
-        logging.info("Grid: " + markup(f" {self.mesh.nx}", "blue"))
+        logging.info("Grid: " + markup(f" {list(self.mesh.nx)}", "blue"))
         logging.info(markup("Evaluating H potential boundary...", "yellow"))
         self.timer.start("H_bc")
         bc_vals = get_analytic_bcs(self.mesh, pdf[0], "H")
@@ -191,6 +224,20 @@ class RosenbluthPotentials_RZ:
         )
         g_success = solver.report["converge"]
 
+        logging.info(
+            "H: "
+            + markup(
+                f"{'successful' if h_success else 'fail'}",
+                "green" if h_success else "red",
+            )
+            + ", G: "
+            + markup(
+                f"{'successful' if g_success else 'fail'}",
+                "green" if g_success else "red",
+            )
+        )
+        logging.info(markup("🎉 Finish! 🎉 ", "red"))
+
         return {
             "pots": {
                 "H": H_pot()[0],
@@ -198,6 +245,7 @@ class RosenbluthPotentials_RZ:
                 "G": G_pot()[0],
                 "jacG": ScalarOP.jac(G_pot),
                 "hessG": ScalarOP.hess(G_pot),
+                "pdf": pdf[0],
             },
             "success": h_success & g_success,
             "timer": self.timer,
@@ -216,6 +264,7 @@ def get_analytic_bcs(
             bcs[k] = analytic_potentials_rz_cpu(
                 (mesh.grid[0][v], mesh.grid[1][v]), mesh.grid, pdf, pot
             )
+
         else:
             bcs[k] = analytic_potentials_rz(
                 (mesh.grid[0][v], mesh.grid[1][v]), mesh.grid, pdf, pot
@@ -236,7 +285,11 @@ def _set_bc_rz(vals: dict[str, Tensor]) -> CylinderBoundary:
 def analytic_potentials_rz_cpu(
     target: tuple[Tensor, ...], grid: tuple[Tensor, ...], pdf: Tensor, potential: str
 ) -> Tensor:
-    """Since vectorized version is too slow, lets try CPU only version using `scipy.special`"""
+    """Since vectorized version is too slow, lets try CPU only version using `scipy.special`
+
+    Note:
+        - Literal translation of the vectorized version, `analytic_potentials_rz`
+    """
     ur = grid[0]
     uz = grid[1]
 
