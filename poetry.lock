@@ -1430,7 +1430,7 @@ tests = ["pytest"]
 
 [[package]]
 name = "pyapes"
-version = "0.1.10"
+version = "0.1.12"
 description = "Python Awesome Partial differential Equation Solver"
 category = "main"
 optional = false
@@ -2160,7 +2160,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.12"
-content-hash = "adbabec121274bc8d0a7af40dc9f5ad5554b2699c554619edbf0d2a275e31375"
+content-hash = "3ec45937e082f23109374f883d9dee0050f172e1bce73fadb921c30e5ed16124"
 
 [metadata.files]
 absl-py = [
@@ -3225,8 +3225,8 @@ pure-eval = [
     {file = "pure_eval-0.2.2.tar.gz", hash = "sha256:2b45320af6dfaa1750f543d714b6d1c520a1688dec6fd24d339063ce0aaa9ac3"},
 ]
 pyapes = [
-    {file = "pyapes-0.1.10-py3-none-any.whl", hash = "sha256:088475e9a3c0e4fdbd138ac8a9664e241e07a68867fab1e548cf189309eb5dd2"},
-    {file = "pyapes-0.1.10.tar.gz", hash = "sha256:03828fa14b286fb4ce8af52b92aaea6cac42cf3038b4c987e2b29541c876a763"},
+    {file = "pyapes-0.1.12-py3-none-any.whl", hash = "sha256:8fab0f6b5a53ebbd9bd0a84552b74f4e7c6356459d461ef229e7d5562cd4c8eb"},
+    {file = "pyapes-0.1.12.tar.gz", hash = "sha256:ca07eab835e47b9dc4ca5844928da0afb83412c2de0bb03eeb87de5e4c4ed51c"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.py3-none-any.whl", hash = "sha256:39c7e2ec30515947ff4e87fb6f456dfc6e84857d34be479c9d4a4ba4bf46aa5d"},

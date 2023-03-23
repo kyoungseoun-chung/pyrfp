@@ -169,7 +169,7 @@ class RosenbluthPotentials_RZ:
 
         logging.info(
             markup(
-                f"🚀 Computing Rosenbluth potentials s🚀",
+                f"🚀 Computing Rosenbluth potentials 🚀",
                 "red",
                 "italic",
             )

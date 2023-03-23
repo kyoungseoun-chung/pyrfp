@@ -245,7 +245,22 @@ def test_mnts_to_potential() -> None:
     assert_close(pots_mnts["jacH"].r, target["jacH"][0], atol=1e-1, rtol=1e-1)
     assert_close(pots_mnts["jacG"].r, target["jacG"][0], atol=1e-1, rtol=1e-1)
 
-    assert_close(pots_mnts["hessG"].rr, target["hessG"][0], atol=1, rtol=1)
+    assert_close(pots_mnts["hessG"].rr, target["hessG"][0], atol=1e-1, rtol=1e-1)
+
+    from pymyplot import myplt as plt
+
+    _, ax = plt.subplots(1, 3)
+
+    ax[0].plot(mesh.grid[0][:, 16], target["G"][:, 16], "ro")
+    ax[0].plot(mesh.grid[0][:, 16], pots_mnts["G"][:, 16], "b-")
+
+    ax[1].plot(mesh.grid[0][:, 16], target["jacG"][0][:, 16], "ro")
+    ax[1].plot(mesh.grid[0][:, 16], pots_mnts["jacG"].r[:, 16], "b-")
+
+    ax[2].plot(mesh.grid[0][:, 16], target["hessG"][0][:, 16], "ro")
+    ax[2].plot(mesh.grid[0][:, 16], pots_mnts["hessG"].rr[:, 16], "b-")
+
+    plt.show()
 
 
 def test_potential_field_solver() -> None:
