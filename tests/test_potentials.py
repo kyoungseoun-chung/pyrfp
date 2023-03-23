@@ -242,6 +242,11 @@ def test_mnts_to_potential() -> None:
     assert_close(pots_mnts["H"], target["H"], atol=1e-1, rtol=1e-1)
     assert_close(pots_mnts["G"], target["G"], atol=1e-1, rtol=1e-1)
 
+    assert_close(pots_mnts["jacH"].r, target["jacH"][0], atol=1e-1, rtol=1e-1)
+    assert_close(pots_mnts["jacG"].r, target["jacG"][0], atol=1e-1, rtol=1e-1)
+
+    assert_close(pots_mnts["hessG"].rr, target["hessG"][0], atol=1, rtol=1)
+
 
 def test_potential_field_solver() -> None:
     from pyrfp.training_data import RosenbluthPotentials_RZ, analytic_potentials_rz
