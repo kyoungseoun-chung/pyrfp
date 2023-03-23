@@ -5,12 +5,14 @@ from math import sqrt
 
 import numpy as np
 import torch
+from pyapes.core.geometry import Cylinder
+from pyapes.core.mesh import Mesh
 from pymytools.logger import Report
 from scipy.special import ellipe as s_ellipe
 from scipy.special import ellipk as s_ellipk
 from torch import Tensor
 from torch import vmap
-from torch.testing import assert_close  # type: ignore
+from torch.testing import assert_close
 
 
 def test_naive_loops() -> None:
@@ -192,6 +194,24 @@ def naive_analytic_potential_numpy(
     return H, G
 
 
+def rayleigh_pdf(grid: tuple[Tensor, ...]) -> Tensor:
+    pdf = (
+        grid[0]
+        * torch.exp(-grid[0] ** 2 / 2)
+        * torch.exp(-grid[1] ** 2 / 2)
+        / (sqrt(torch.pi))
+    )
+
+    dx = grid[0][1, 0] - grid[0][0, 0]
+    dy = grid[1][0, 1] - grid[1][0, 0]
+
+    density = torch.sum(pdf * dx * dy)
+
+    # Make sure density is 1
+    pdf /= density
+    return pdf
+
+
 def test_potentials() -> None:
     from pyrfp.training_data import analytic_potentials_rz
 
@@ -202,19 +222,7 @@ def test_potentials() -> None:
     y = torch.linspace(-5, 5, ny, dtype=torch.float64)
     grid = torch.meshgrid(x, y, indexing="ij")
 
-    pdf = (
-        grid[0]
-        * torch.exp(-grid[0] ** 2 / 2)
-        * torch.exp(-grid[1] ** 2 / 2)
-        / (sqrt(torch.pi))
-    )
-
-    dx = x[1] - x[0]
-    dy = y[1] - y[0]
-
-    density = torch.sum(pdf * dx * dy)
-
-    pdf /= density
+    pdf = rayleigh_pdf(grid)
 
     tic = time.perf_counter()
     np_H, np_G = naive_analytic_potential_numpy(grid, pdf)
@@ -234,18 +242,60 @@ def test_potentials() -> None:
     table.display()
 
 
-def test_potential_field_solver() -> None:
-    from pyapes.core.geometry import Cylinder
-    from pyapes.core.mesh import Mesh
-    from pyrfp.training_data import RosenbluthPotentials_RZ
+def test_potential_boundary() -> None:
+    from pyrfp.training_data import get_analytic_bcs
+    from pymytools.logger import timer
 
-    mesh = Mesh(Cylinder[0:5, -5:5], None, [64, 128])
+    n_grid = [16, 32]
+
+    if torch.backends.mps.is_available():  # type: ignore
+        device = "mps"
+        dtype = "single"
+
+        mesh = Mesh(Cylinder[0:5, -5:5], None, n_grid, device=device, dtype=dtype)
+        pdf = rayleigh_pdf(mesh.grid)
+
+        timer.start("mps")
+        get_analytic_bcs(mesh, pdf, "H")
+        get_analytic_bcs(mesh, pdf, "G")
+        timer.end("mps")
+
+    device = "cpu"
+    dtype = "double"
+
+    mesh = Mesh(Cylinder[0:5, -5:5], None, n_grid, device=device, dtype=dtype)
+    pdf = rayleigh_pdf(mesh.grid)
+
+    timer.start("cpu")
+    get_analytic_bcs(mesh, pdf, "H")
+    get_analytic_bcs(mesh, pdf, "G")
+    timer.end("cpu")
+
+
+def test_potential_field_solver() -> None:
+    from pyrfp.training_data import RosenbluthPotentials_RZ, analytic_potentials_rz
+
+    mesh = Mesh(Cylinder[0:5, -5:5], None, [32, 64])
+    pdf = rayleigh_pdf(mesh.grid)
+
     RP_rz = RosenbluthPotentials_RZ(
         mesh,
         solver_config={
             "method": "bicgstab",
-            "tol": 1e-5,
+            "tol": 1e-6,
             "max_it": 1000,
             "report": False,
         },
     )
+    res = RP_rz.from_pdf(pdf)
+    t_H = analytic_potentials_rz(mesh.grid, mesh.grid, pdf, "H")
+    t_G = analytic_potentials_rz(mesh.grid, mesh.grid, pdf, "G")
+
+    assert res["pots"] is not None
+
+    assert_close(res["pots"]["H"], t_H, atol=1e-1, rtol=1e-1)
+    assert_close(res["pots"]["G"], t_G, atol=1e-1, rtol=1e-1)
+
+    # 32 x 64 is too coarse for the gradient
+    # jac_tH = torch.gradient(t_H, spacing=mesh.dx.tolist(), edge_order=2)
+    # assert_close(res["pots"]["jacH"].r, jac_tH[0], atol=1e-1, rtol=1e-1)

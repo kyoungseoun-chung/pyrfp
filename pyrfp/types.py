@@ -5,6 +5,7 @@ from typing import TypedDict
 import torch
 from pyapes.tools.spatial import Hess
 from pyapes.tools.spatial import Jac
+from pymytools.logger import Timer
 from torch import Tensor
 
 
@@ -26,6 +27,7 @@ class Potentials(TypedDict):
 class PotentialReturnType(TypedDict):
     pots: Potentials | None
     success: bool
+    timer: Timer | None
 
 
 class OptimizerConfig(TypedDict):

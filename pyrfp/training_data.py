@@ -26,7 +26,6 @@ Therefore, we decided to use the vmap approach for the computation of the bounda
 """
 from dataclasses import dataclass
 from math import pi
-from typing import Callable
 
 import torch
 from pyapes.core.mesh import Mesh
@@ -38,11 +37,15 @@ from pyapes.core.variables.bcs import CylinderBoundary
 from pyapes.tools.spatial import ScalarOP
 from pymaxed.maxed import Maxed
 from pymaxed.vectors import Vec
+from pymytools.logger import logging
+from pymytools.logger import markup
+from pymytools.logger import Timer
 from pymytools.special import ellipe
 from pymytools.special import ellipk
 from torch import Tensor
 from torch import vmap
 
+from pyrfp import __version__
 from pyrfp.types import OptimizerConfig
 from pyrfp.types import PotentialReturnType
 
@@ -70,6 +73,8 @@ class RosenbluthPotentials_RZ:
             self.mesh.domain.type == "cylinder"
         ), "RosenbluthPotential_RZ only works for cylinder domain."
 
+        self.timer = Timer()
+
     def from_mnts(self, mnts: Tensor) -> PotentialReturnType:
         """From moment, obtain the maximum entropy distribution (maxed)"""
 
@@ -91,16 +96,31 @@ class RosenbluthPotentials_RZ:
             disp=False,
         )
 
+        self.timer.start("maxed")
         maxed.solve()
+        self.timer.end("maxed")
 
         if not maxed.success:
-            return {"pots": None, "success": False}
+            return {"pots": None, "success": False, "timer": None}
 
         pdf = maxed.dist_from_coeffs()
 
         return self.from_pdf(pdf)
 
     def from_pdf(self, pdf: Tensor) -> PotentialReturnType:
+        """Compute the Rosenbluth potentials and their derivatives (Jacobian and Hessian) from the given PDF by solving the Poisson equation using the iterative solver (bicgstab scheme).
+
+        Args:
+            pdf (Tensor): a given PDF tensor.
+
+        Returns:
+            PotentialReturnType: a dictionary containing the potentials and their derivatives.
+
+        Note:
+            - The components of the Jacobian and Hessian can be accessed by member attribute of each object, e.g. `PotentialReturnType["jacH"].r` for the radial component of the Jacobian.
+            - The `PotentialReturnType["success"]` is `True` only H and G potential both are converged.
+        """
+
         assert (
             self.solver_config is not None
         ), "RosenbluthPotential_rz: solver config is not provided."
@@ -113,15 +133,61 @@ class RosenbluthPotentials_RZ:
         if pdf.shape[0] != 1 or pdf.shape == self.mesh.nx:
             pdf = pdf.unsqueeze(0)
 
-        bc_H = _set_bc_rz(pdf, bc_H_pots)
+        logging.info(
+            markup(
+                f"🚀 Computing Rosenbluth potentials 🚀",
+                style="italic",
+            )
+            + f" (pyrfp v{__version__})"
+        )
+        logging.info(
+            "Domain: "
+            + markup(
+                f" {self.mesh.lower.tolist()} x {self.mesh.upper.tolist()}", "blue"
+            )
+        )
+        logging.info("Grid: " + markup(f" {self.mesh.nx}", "blue"))
+        logging.info(markup("Evaluating H potential boundary...", "yellow"))
+        self.timer.start("H_bc")
+        bc_vals = get_analytic_bcs(self.mesh, pdf[0], "H")
+        self.timer.end("H_bc")
+        logging.info(
+            "🔥Done in " + markup(f"{self.timer.elapsed('H_bc'):.2f} s", "blue")
+        )
+
+        bc_H = _set_bc_rz(bc_vals)
         H_pot = Field("H", 1, self.mesh, {"domain": bc_H(), "obstacle": None})
 
+        logging.info(markup("Solving H potential...", "yellow"))
+        self.timer.start("H_pot")
         solver.set_eq(fdm.laplacian(H_pot) == -8 * pi * pdf)
+        solver.solve()
+        self.timer.end("H_pot")
+        logging.info(
+            "🔥Done in " + markup(f"{self.timer.elapsed('H_pot'):.2f} s", "blue")
+        )
+        h_success = solver.report["converge"]
 
-        bc_G = _set_bc_rz(pdf, bc_G_pots)
+        logging.info(markup("Evaluating G potential boundary...", "yellow"))
+        self.timer.start("G_bc")
+        bc_vals = get_analytic_bcs(self.mesh, pdf[0], "G")
+        self.timer.end("G_bc")
+        logging.info(
+            "🔥Done in " + markup(f"{self.timer.elapsed('G_bc'):.2f} s", "blue")
+        )
+
+        bc_G = _set_bc_rz(bc_vals)
         G_pot = Field("G", 1, self.mesh, {"domain": bc_G(), "obstacle": None})
 
+        logging.info(markup("Solving G potential...", "yellow"))
+        self.timer.start("G_pot")
         solver.set_eq(fdm.laplacian(G_pot) == H_pot())
+        solver.solve()
+        self.timer.end("G_pot")
+        logging.info(
+            "🔥Done in " + markup(f"{self.timer.elapsed('G_pot'):.2f} s", "blue")
+        )
+        g_success = solver.report["converge"]
 
         return {
             "pots": {
@@ -131,41 +197,31 @@ class RosenbluthPotentials_RZ:
                 "jacG": ScalarOP.jac(G_pot),
                 "hessG": ScalarOP.hess(G_pot),
             },
-            "success": True,
+            "success": h_success & g_success,
+            "timer": self.timer,
         }
 
 
-def _set_bc_rz(pdf: Tensor, bc_func: Callable) -> CylinderBoundary:
+def get_analytic_bcs(mesh: Mesh, pdf: Tensor, pot: str) -> dict[str, Tensor]:
+    bcs: dict[str, Tensor] = {}
+
+    for k, v in mesh.d_mask.items():
+        if k == "rl":
+            pass
+        bcs[k] = analytic_potentials_rz(
+            (mesh.grid[0][v], mesh.grid[1][v]), mesh.grid, pdf, pot
+        )
+
+    return bcs
+
+
+def _set_bc_rz(vals: dict[str, Tensor]) -> CylinderBoundary:
     return CylinderBoundary(
         rl={"bc_type": "neumann", "bc_val": 0.0},
-        ru={"bc_type": "dirichlet", "bc_val": bc_func, "bc_val_opt": {"pdf": pdf}},
-        zl={"bc_type": "dirichlet", "bc_val": bc_func, "bc_val_opt": {"pdf": pdf}},
-        zu={"bc_type": "dirichlet", "bc_val": bc_func, "bc_val_opt": {"pdf": pdf}},
+        ru={"bc_type": "dirichlet", "bc_val": vals["ru"]},
+        zl={"bc_type": "dirichlet", "bc_val": vals["zl"]},
+        zu={"bc_type": "dirichlet", "bc_val": vals["zu"]},
     )
-
-
-def bc_H_pots(
-    grid: tuple[Tensor, ...], mask: Tensor, _, opt: dict[str, Tensor]
-) -> Tensor:
-    """Dirichlet boundary condition for the H potential computed by the analytic solution of the Rosenbluth potential."""
-
-    pdf = opt["pdf"]
-
-    target = (grid[0][mask], grid[1][mask])
-
-    return analytic_potentials_rz(target, grid, pdf, "H")
-
-
-def bc_G_pots(
-    grid: tuple[Tensor, ...], mask: Tensor, _, opt: dict[str, Tensor]
-) -> Tensor:
-    """Dirichlet boundary condition for the G potential computed by the analytic solution of the Rosenbluth potential."""
-
-    pdf = opt["pdf"]
-
-    target = (grid[0][mask], grid[1][mask])
-
-    return analytic_potentials_rz(target, grid, pdf, "G")
 
 
 def analytic_potentials_rz(
