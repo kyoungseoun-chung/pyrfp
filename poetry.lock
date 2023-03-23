@@ -657,7 +657,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "pyapes"
-version = "0.1.1"
+version = "0.1.4"
 description = "Python Awesome Partial differential Equation Solver"
 category = "main"
 optional = false
@@ -665,7 +665,7 @@ python-versions = ">=3.10,<3.12"
 
 [package.dependencies]
 pymyplot = ">=0.2.7,<0.3.0"
-pymytools = ">=0.1.6,<0.2.0"
+pymytools = ">=0.1.13,<0.2.0"
 torch = ">=2.0.0,<3.0.0"
 
 [[package]]
@@ -733,7 +733,7 @@ matplotlib = ">=3.6.0,<4.0.0"
 
 [[package]]
 name = "pymytools"
-version = "0.1.12"
+version = "0.1.13"
 description = "Tools used in my pystops project."
 category = "main"
 optional = false
@@ -1127,7 +1127,7 @@ test = ["pytest (>=6.0.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.12"
-content-hash = "12a7e11de2801e99a543273aed4578ce8c006729a64939edf8cbc6eeb1770255"
+content-hash = "07d5bc91824df52d756c6eff21b492d064cd11545e6da76f59632dc422ab2a89"
 
 [metadata.files]
 absl-py = [
@@ -1875,8 +1875,8 @@ protobuf = [
     {file = "protobuf-4.22.1.tar.gz", hash = "sha256:dce7a55d501c31ecf688adb2f6c3f763cf11bc0be815d1946a84d74772ab07a7"},
 ]
 pyapes = [
-    {file = "pyapes-0.1.1-py3-none-any.whl", hash = "sha256:385129f8a61cadbd640cc9cf2aba4d89d9765bc7853aacd6b4cb73de354bee73"},
-    {file = "pyapes-0.1.1.tar.gz", hash = "sha256:15f596c101817b3c15e860811d975c1223ddfcf1b8c91cbef42ac6720159612b"},
+    {file = "pyapes-0.1.4-py3-none-any.whl", hash = "sha256:771c667f6134578be43f7e523883d1f6e0dd930ce58ad53dbf8ac00b3fca31eb"},
+    {file = "pyapes-0.1.4.tar.gz", hash = "sha256:ef96892e638738b80520a08cd6aed464e93302cba99a4973e819a36dfcd8ac14"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.py3-none-any.whl", hash = "sha256:39c7e2ec30515947ff4e87fb6f456dfc6e84857d34be479c9d4a4ba4bf46aa5d"},
@@ -1903,8 +1903,8 @@ pymyplot = [
     {file = "pymyplot-0.2.7.tar.gz", hash = "sha256:bd5391237e59f7869db1b585ea084720121514076d90f6af49f0b233ec4556e6"},
 ]
 pymytools = [
-    {file = "pymytools-0.1.12-py3-none-any.whl", hash = "sha256:8b5e44556f7e8f428a8bf69c28a915819cd722769ce5b2d56d8bc503ca07d1b9"},
-    {file = "pymytools-0.1.12.tar.gz", hash = "sha256:f4736e7230c3decdcb8cc5245970027a128eb182eb0d1924a772888ad2502909"},
+    {file = "pymytools-0.1.13-py3-none-any.whl", hash = "sha256:4dbf5a872b6ef49d6667be20cc9f23dc8c980954e082d6eb593a431469686719"},
+    {file = "pymytools-0.1.13.tar.gz", hash = "sha256:fd49d846308d9b44c1c6df8c231fc1c496558766ef517bce51bc47c0f5149b74"},
 ]
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},

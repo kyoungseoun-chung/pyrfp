@@ -3,6 +3,8 @@
 from typing import TypedDict
 
 import torch
+from pyapes.tools.spatial import Hess
+from pyapes.tools.spatial import Jac
 from torch import Tensor
 
 
@@ -11,13 +13,13 @@ class Potentials(TypedDict):
 
     H: Tensor
     """Rosenbluth H potential."""
-    jacH: Tensor
+    jacH: Jac
     """Jacobian of the H potential."""
     G: Tensor
     """Rotational G potential."""
-    jacG: Tensor
+    jacG: Jac
     """Jacobian of the G potential."""
-    hessG: Tensor
+    hessG: Hess
     """Hessian of the H potential."""
 
 
@@ -31,15 +33,6 @@ class OptimizerConfig(TypedDict):
     max_iter: int | None
     gtol: float
     xtol: float
-
-
-class SolverConfig(TypedDict):
-    ...
-
-
-class PotentialConfig(TypedDict):
-    optimizer: OptimizerConfig
-    solver: SolverConfig
 
 
 class LRSchedularOptions(TypedDict):

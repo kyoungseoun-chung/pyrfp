@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Test R-potential related functions."""
-from math import sqrt
 import time
-from torch import Tensor
-from torch.testing import assert_close  # type: ignore
-import torch
-from pymytools.special import ellipe, ellipk
-from scipy.special import ellipe as s_ellipe, ellipk as s_ellipk
+from math import sqrt
+
 import numpy as np
-from torch import vmap
+import torch
 from pymytools.logger import Report
+from scipy.special import ellipe as s_ellipe
+from scipy.special import ellipk as s_ellipk
+from torch import Tensor
+from torch import vmap
+from torch.testing import assert_close  # type: ignore
 
 
 def test_naive_loops() -> None:
-
     nx = 8
     ny = 16
 
@@ -52,7 +52,6 @@ def test_naive_loops() -> None:
 
 
 def _vectorized_for_loop_3(grid: tuple[Tensor, Tensor]) -> Tensor:
-
     x = grid[0]
     y = grid[1]
     dx = grid[0][1, 0] - grid[0][0, 0]
@@ -69,7 +68,6 @@ def _vectorized_for_loop_3(grid: tuple[Tensor, Tensor]) -> Tensor:
 
 
 def _vectorized_for_loop_2(grid: tuple[Tensor, Tensor]) -> Tensor:
-
     x = grid[0]
     y = grid[1]
     dx = grid[0][1, 0] - grid[0][0, 0]
@@ -91,7 +89,6 @@ def _vectorized_for_loop_2(grid: tuple[Tensor, Tensor]) -> Tensor:
 
 
 def _vectorized_for_loop_1(grid: tuple[Tensor, Tensor]) -> Tensor:
-
     x = grid[0]
     y = grid[1]
     dx = grid[0][1, 0] - grid[0][0, 0]
@@ -110,7 +107,6 @@ def _vectorized_for_loop_1(grid: tuple[Tensor, Tensor]) -> Tensor:
 
 
 def _naive_for_loop(grid: tuple[Tensor, Tensor]) -> Tensor:
-
     x = grid[0]
     y = grid[1]
     dx = grid[0][1, 0] - grid[0][0, 0]
@@ -197,7 +193,7 @@ def naive_analytic_potential_numpy(
 
 
 def test_potentials() -> None:
-    from pyrfp.training_data import analytic_potentials
+    from pyrfp.training_data import analytic_potentials_rz
 
     nx = 5
     ny = 10
@@ -225,8 +221,8 @@ def test_potentials() -> None:
     t_naive = time.perf_counter() - tic
 
     tic = time.perf_counter()
-    t_H = analytic_potentials(grid, pdf, "H")
-    t_G = analytic_potentials(grid, pdf, "G")
+    t_H = analytic_potentials_rz(grid, grid, pdf, "H")
+    t_G = analytic_potentials_rz(grid, grid, pdf, "G")
     t_torch = time.perf_counter() - tic
 
     assert_close(torch.from_numpy(np_H).to(dtype=t_H.dtype, device=t_H.device), t_H)
@@ -236,3 +232,20 @@ def test_potentials() -> None:
 
     table = Report("Computational Costs", data, style=["green", "red"])
     table.display()
+
+
+def test_potential_field_solver() -> None:
+    from pyapes.core.geometry import Cylinder
+    from pyapes.core.mesh import Mesh
+    from pyrfp.training_data import RosenbluthPotentials_RZ
+
+    mesh = Mesh(Cylinder[0:5, -5:5], None, [64, 128])
+    RP_rz = RosenbluthPotentials_RZ(
+        mesh,
+        solver_config={
+            "method": "bicgstab",
+            "tol": 1e-5,
+            "max_it": 1000,
+            "report": False,
+        },
+    )
