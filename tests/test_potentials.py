@@ -16,8 +16,8 @@ from torch.testing import assert_close
 
 
 def test_naive_loops() -> None:
-    nx = 8
-    ny = 16
+    nx = 5
+    ny = 10
 
     x = torch.linspace(0, 2, nx, dtype=torch.float64)
     y = torch.linspace(-2, 1, ny, dtype=torch.float64)
@@ -213,7 +213,7 @@ def rayleigh_pdf(grid: tuple[Tensor, ...]) -> Tensor:
 
 
 def test_potentials() -> None:
-    from pyrfp.training_data import analytic_potentials_rz
+    from pyrfp.training_data import analytic_potentials_rz, analytic_potentials_rz_cpu
 
     nx = 5
     ny = 10
@@ -233,10 +233,25 @@ def test_potentials() -> None:
     t_G = analytic_potentials_rz(grid, grid, pdf, "G")
     t_torch = time.perf_counter() - tic
 
+    tic = time.perf_counter()
+    t_H_cpu = analytic_potentials_rz_cpu(grid, grid, pdf, "H")
+    t_G_cpu = analytic_potentials_rz_cpu(grid, grid, pdf, "G")
+    t_torch_cpu = time.perf_counter() - tic
+
     assert_close(torch.from_numpy(np_H).to(dtype=t_H.dtype, device=t_H.device), t_H)
     assert_close(torch.from_numpy(np_G).to(dtype=t_G.dtype, device=t_G.device), t_G)
 
-    data = {"Scheme": ["Naive", "Vectorized"], "Elapsed Time (s)": [t_naive, t_torch]}
+    assert_close(
+        torch.from_numpy(np_H).to(dtype=t_H_cpu.dtype, device=t_H_cpu.device), t_H_cpu
+    )
+    assert_close(
+        torch.from_numpy(np_G).to(dtype=t_G_cpu.dtype, device=t_G_cpu.device), t_G_cpu
+    )
+
+    data = {
+        "Scheme": ["Naive", "Vectorized", "CPU only"],
+        "Elapsed Time (s)": [t_naive, t_torch, t_torch_cpu],
+    }
 
     table = Report("Computational Costs", data, style=["green", "red"])
     table.display()
@@ -246,7 +261,7 @@ def test_potential_boundary() -> None:
     from pyrfp.training_data import get_analytic_bcs
     from pymytools.logger import timer
 
-    n_grid = [16, 32]
+    n_grid = [64, 128]
 
     if torch.backends.mps.is_available():  # type: ignore
         device = "mps"
@@ -256,9 +271,14 @@ def test_potential_boundary() -> None:
         pdf = rayleigh_pdf(mesh.grid)
 
         timer.start("mps")
+        get_analytic_bcs(mesh, pdf, "H", cpu=False)
+        get_analytic_bcs(mesh, pdf, "G", cpu=False)
+        timer.end("mps")
+
+        timer.start("mps_vec")
         get_analytic_bcs(mesh, pdf, "H")
         get_analytic_bcs(mesh, pdf, "G")
-        timer.end("mps")
+        timer.end("mps_vec")
 
     device = "cpu"
     dtype = "double"
@@ -266,10 +286,16 @@ def test_potential_boundary() -> None:
     mesh = Mesh(Cylinder[0:5, -5:5], None, n_grid, device=device, dtype=dtype)
     pdf = rayleigh_pdf(mesh.grid)
 
+    timer.start("cpu_vec")
+    get_analytic_bcs(mesh, pdf, "H", cpu=False)
+    get_analytic_bcs(mesh, pdf, "G", cpu=False)
+    timer.end("cpu_vec")
+
     timer.start("cpu")
     get_analytic_bcs(mesh, pdf, "H")
     get_analytic_bcs(mesh, pdf, "G")
     timer.end("cpu")
+    pass
 
 
 def test_potential_field_solver() -> None:

@@ -42,6 +42,8 @@ from pymytools.logger import markup
 from pymytools.logger import Timer
 from pymytools.special import ellipe
 from pymytools.special import ellipk
+from scipy.special import ellipe as s_ellipe
+from scipy.special import ellipk as s_ellipk
 from torch import Tensor
 from torch import vmap
 
@@ -135,7 +137,7 @@ class RosenbluthPotentials_RZ:
 
         logging.info(
             markup(
-                f"🚀 Computing Rosenbluth potentials 🚀",
+                f"🚀 Computing Rosenbluth potentials ssssss🚀",
                 style="italic",
             )
             + f" (pyrfp v{__version__})"
@@ -202,15 +204,22 @@ class RosenbluthPotentials_RZ:
         }
 
 
-def get_analytic_bcs(mesh: Mesh, pdf: Tensor, pot: str) -> dict[str, Tensor]:
+def get_analytic_bcs(
+    mesh: Mesh, pdf: Tensor, pot: str, cpu: bool = True
+) -> dict[str, Tensor]:
     bcs: dict[str, Tensor] = {}
 
     for k, v in mesh.d_mask.items():
         if k == "rl":
             pass
-        bcs[k] = analytic_potentials_rz(
-            (mesh.grid[0][v], mesh.grid[1][v]), mesh.grid, pdf, pot
-        )
+        if cpu:
+            bcs[k] = analytic_potentials_rz_cpu(
+                (mesh.grid[0][v], mesh.grid[1][v]), mesh.grid, pdf, pot
+            )
+        else:
+            bcs[k] = analytic_potentials_rz(
+                (mesh.grid[0][v], mesh.grid[1][v]), mesh.grid, pdf, pot
+            )
 
     return bcs
 
@@ -222,6 +231,60 @@ def _set_bc_rz(vals: dict[str, Tensor]) -> CylinderBoundary:
         zl={"bc_type": "dirichlet", "bc_val": vals["zl"]},
         zu={"bc_type": "dirichlet", "bc_val": vals["zu"]},
     )
+
+
+def analytic_potentials_rz_cpu(
+    target: tuple[Tensor, ...], grid: tuple[Tensor, ...], pdf: Tensor, potential: str
+) -> Tensor:
+    """Since vectorized version is too slow, lets try CPU only version using `scipy.special`"""
+    ur = grid[0]
+    uz = grid[1]
+
+    hr = ur[1, 0] - ur[0, 0]
+    hz = uz[0, 1] - uz[0, 0]
+
+    # What if target[0].shape = torch.Size([64]) and grid[0].shape = torch.Size([64, 128?
+    # I need to make 64 x 1 x (64 * 128)
+    ur_target = target[0].flatten().unsqueeze(1).repeat(1, ur.numel())
+    uz_target = target[1].flatten().unsqueeze(1).repeat(1, ur.numel())
+
+    ur = ur.flatten().repeat(target[0].numel(), 1)
+    uz = uz.flatten().repeat(target[0].numel(), 1)
+    pdf = pdf.flatten().repeat(target[0].numel(), 1)
+
+    inner = (ur_target + ur) ** 2 + (uz_target - uz) ** 2
+    k = 4 * ur_target * ur / inner
+
+    if potential.lower() == "h":
+        ek = s_ellipk(k.to(device=torch.device("cpu"))).to(
+            device=ur.device, dtype=ur.dtype
+        )
+        ek[k.eq(1.0)] = 0.0
+        return torch.sum(
+            torch.nan_to_num(
+                8 * ur * pdf * ek / torch.sqrt(inner) * hr * hz,
+                nan=0.0,
+                posinf=0.0,
+                neginf=0.0,
+            ),
+            dim=1,
+        ).view(*target[0].shape)
+    elif potential.lower() == "g":
+        ee = s_ellipe(k.to(device=torch.device("cpu"))).to(
+            device=ur.device, dtype=ur.dtype
+        )
+        ee[k.eq(1.0)] = 0.0
+        return torch.sum(
+            torch.nan_to_num(
+                4 * ur * pdf * ee * torch.sqrt(inner) * hr * hz,
+                nan=0.0,
+                posinf=0.0,
+                neginf=0.0,
+            ),
+            dim=1,
+        ).view(*target[0].shape)
+    else:
+        raise ValueError("Potential must be either H or G")
 
 
 def analytic_potentials_rz(
