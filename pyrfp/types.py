@@ -3,8 +3,8 @@
 from typing import TypedDict
 
 import torch
-from pyapes.tools.spatial import Hess
-from pyapes.tools.spatial import Jac
+from pyapes.variables.container import Hess
+from pyapes.variables.container import Jac
 from pymytools.logger import Timer
 from torch import Tensor
 

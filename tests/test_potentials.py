@@ -5,9 +5,10 @@ from math import sqrt
 
 import numpy as np
 import torch
-from pyapes.core.geometry import Cylinder
-from pyapes.core.mesh import Mesh
+from pyapes.geometry import Cylinder
+from pyapes.mesh import Mesh
 from pymytools.diagnostics import DataLoader
+from pymytools.diagnostics import DataSaver
 from pymytools.logger import Report
 from scipy.special import ellipe as s_ellipe
 from scipy.special import ellipk as s_ellipk
@@ -242,6 +243,16 @@ def test_mnts_to_potential() -> None:
     assert_close(pots_mnts["H"], target["H"], atol=1e-1, rtol=1e-1)
     assert_close(pots_mnts["G"], target["G"], atol=1e-1, rtol=1e-1)
 
+    from pyapes.solver.fdc import ScalarOP
+    from pyapes.variables import Field
+
+    ds = DataSaver("./tests/test_data/")
+    ds.save_hdf5({"H": pots_mnts["H"], "G": pots_mnts["G"]}, "pots.h5")
+
+    torch_jacG = torch.gradient(pots_mnts["G"], spacing=mesh.dx.tolist(), edge_order=2)[
+        0
+    ]
+
     assert_close(pots_mnts["jacH"].r, target["jacH"][0], atol=1e-1, rtol=1e-1)
     assert_close(pots_mnts["jacG"].r, target["jacG"][0], atol=1e-1, rtol=1e-1)
 
@@ -256,6 +267,7 @@ def test_mnts_to_potential() -> None:
 
     ax[1].plot(mesh.grid[0][:, 16], target["jacG"][0][:, 16], "ro")
     ax[1].plot(mesh.grid[0][:, 16], pots_mnts["jacG"].r[:, 16], "b-")
+    ax[1].plot(mesh.grid[0][:, 16], torch_jacG[:, 16], "g:")
 
     ax[2].plot(mesh.grid[0][:, 16], target["hessG"][0][:, 16], "ro")
     ax[2].plot(mesh.grid[0][:, 16], pots_mnts["hessG"].rr[:, 16], "b-")

@@ -33,13 +33,13 @@ from math import pi
 
 import pymaxed
 import torch
-from pyapes.core.mesh import Mesh
-from pyapes.core.solver.fdm import FDM
-from pyapes.core.solver.ops import Solver
-from pyapes.core.solver.tools import FDMSolverConfig
-from pyapes.core.variables import Field
-from pyapes.core.variables.bcs import CylinderBoundary
-from pyapes.tools.spatial import ScalarOP
+from pyapes.mesh import Mesh
+from pyapes.solver.fdc import ScalarOP
+from pyapes.solver.fdm import FDM
+from pyapes.solver.ops import Solver
+from pyapes.solver.tools import FDMSolverConfig
+from pyapes.variables import Field
+from pyapes.variables.bcs import CylinderBoundary
 from pymaxed.maxed import Maxed
 from pymaxed.vectors import Vec
 from pymytools.logger import logging
@@ -238,13 +238,15 @@ class RosenbluthPotentials_RZ:
         )
         logging.info(markup("🎉 Finish! 🎉 ", "red"))
 
+        var = Field("container", 1, self.mesh, None)
+
         return {
             "pots": {
                 "H": H_pot()[0],
-                "jacH": ScalarOP.jac(H_pot),
+                "jacH": ScalarOP.jac(var.set_var_tensor(H_pot[0])),
                 "G": G_pot()[0],
-                "jacG": ScalarOP.jac(G_pot),
-                "hessG": ScalarOP.hess(G_pot),
+                "jacG": ScalarOP.jac(var.set_var_tensor(G_pot[0])),
+                "hessG": ScalarOP.hess(var.set_var_tensor(G_pot[0])),
                 "pdf": pdf[0],
             },
             "success": h_success & g_success,

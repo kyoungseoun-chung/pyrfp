@@ -1430,7 +1430,7 @@ tests = ["pytest"]
 
 [[package]]
 name = "pyapes"
-version = "0.1.12"
+version = "0.2.1"
 description = "Python Awesome Partial differential Equation Solver"
 category = "main"
 optional = false
@@ -1492,14 +1492,14 @@ plugins = ["importlib-metadata"]
 
 [[package]]
 name = "pymaxed"
-version = "0.1.5"
+version = "0.1.7"
 description = "Python package for the maximum entroy distribution."
 category = "main"
 optional = false
 python-versions = ">=3.10,<3.12"
 
 [package.dependencies]
-pyapes = ">=0.1.0,<0.2.0"
+pyapes = ">=0.2.1,<0.3.0"
 
 [[package]]
 name = "pymyplot"
@@ -2160,7 +2160,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.12"
-content-hash = "3ec45937e082f23109374f883d9dee0050f172e1bce73fadb921c30e5ed16124"
+content-hash = "c7dc5b1939d2725cd51b796f40e99ffb42ff6fec83ec63802c582ac1f6199237"
 
 [metadata.files]
 absl-py = [
@@ -3225,8 +3225,8 @@ pure-eval = [
     {file = "pure_eval-0.2.2.tar.gz", hash = "sha256:2b45320af6dfaa1750f543d714b6d1c520a1688dec6fd24d339063ce0aaa9ac3"},
 ]
 pyapes = [
-    {file = "pyapes-0.1.12-py3-none-any.whl", hash = "sha256:8fab0f6b5a53ebbd9bd0a84552b74f4e7c6356459d461ef229e7d5562cd4c8eb"},
-    {file = "pyapes-0.1.12.tar.gz", hash = "sha256:ca07eab835e47b9dc4ca5844928da0afb83412c2de0bb03eeb87de5e4c4ed51c"},
+    {file = "pyapes-0.2.1-py3-none-any.whl", hash = "sha256:4821a1e3b8ead0ace0ddb34161c494c7667363d310ca16b59ab3164061d35f43"},
+    {file = "pyapes-0.2.1.tar.gz", hash = "sha256:eb8cb2a48d69b9ff4aa74f2d28579f5b5fcead5657b3900da4b78c25a7ba6acf"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.py3-none-any.whl", hash = "sha256:39c7e2ec30515947ff4e87fb6f456dfc6e84857d34be479c9d4a4ba4bf46aa5d"},
@@ -3249,8 +3249,8 @@ Pygments = [
     {file = "Pygments-2.14.0.tar.gz", hash = "sha256:b3ed06a9e8ac9a9aae5a6f5dbe78a8a58655d17b43b93c078f094ddc476ae297"},
 ]
 pymaxed = [
-    {file = "pymaxed-0.1.5-py3-none-any.whl", hash = "sha256:9b758d2e64c3acd0dd6d63ad2f5b34454f6ae45cf372bda4a6f9b36b782c17d0"},
-    {file = "pymaxed-0.1.5.tar.gz", hash = "sha256:73db7d0075cd27452523f9ebaaa6a8470f03701ae9b35bdc1482c408404441a0"},
+    {file = "pymaxed-0.1.7-py3-none-any.whl", hash = "sha256:b318d1abdc77967c59bdd1a3c287a5dbf0edfc3e470bbe4a7835bfdd9f0f23f0"},
+    {file = "pymaxed-0.1.7.tar.gz", hash = "sha256:6d74cdebac328dcaa6282b4042d07b8e715e729f80c9c8d94cc227a8433122dc"},
 ]
 pymyplot = [
     {file = "pymyplot-0.2.7-py3-none-any.whl", hash = "sha256:73f64065cf2c26edf3137d68c0dbeaab328eed38fa36d0ae4fe457c0a963e2c5"},
