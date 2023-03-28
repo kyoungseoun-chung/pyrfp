@@ -243,9 +243,6 @@ def test_mnts_to_potential() -> None:
     assert_close(pots_mnts["H"], target["H"], atol=1e-1, rtol=1e-1)
     assert_close(pots_mnts["G"], target["G"], atol=1e-1, rtol=1e-1)
 
-    from pyapes.solver.fdc import ScalarOP
-    from pyapes.variables import Field
-
     ds = DataSaver("./tests/test_data/")
     ds.save_hdf5({"H": pots_mnts["H"], "G": pots_mnts["G"]}, "pots.h5")
 

@@ -1430,7 +1430,7 @@ tests = ["pytest"]
 
 [[package]]
 name = "pyapes"
-version = "0.2.1"
+version = "0.2.8"
 description = "Python Awesome Partial differential Equation Solver"
 category = "main"
 optional = false
@@ -1438,7 +1438,7 @@ python-versions = ">=3.10,<3.12"
 
 [package.dependencies]
 pymyplot = ">=0.2.7,<0.3.0"
-pymytools = ">=0.1.13,<0.2.0"
+pymytools = ">=0.1.15,<0.2.0"
 torch = ">=2.0.0,<3.0.0"
 
 [[package]]
@@ -1514,7 +1514,7 @@ matplotlib = ">=3.6.0,<4.0.0"
 
 [[package]]
 name = "pymytools"
-version = "0.1.13"
+version = "0.1.15"
 description = "Tools used in my pystops project."
 category = "main"
 optional = false
@@ -1527,6 +1527,7 @@ pyevtk = ">=1.5.0,<2.0.0"
 pymyplot = ">=0.2.7,<0.3.0"
 rich = ">=13.3.2,<14.0.0"
 scipy = ">=1.10.1,<2.0.0"
+simpleaudio = ">=1.0.4,<2.0.0"
 tensorboard = ">=2.12.0,<3.0.0"
 torch = ">=2.0.0,<3.0.0"
 tqdm = ">=4.65.0,<5.0.0"
@@ -1807,6 +1808,14 @@ typing-extensions = "*"
 [package.extras]
 test = ["pytest (>=6.2)", "virtualenv (>20)"]
 toml = ["setuptools (>=42)"]
+
+[[package]]
+name = "simpleaudio"
+version = "1.0.4"
+description = "Simple, asynchronous audio playback for Python 3."
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "six"
@@ -2160,7 +2169,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.12"
-content-hash = "c7dc5b1939d2725cd51b796f40e99ffb42ff6fec83ec63802c582ac1f6199237"
+content-hash = "1df4b019f77b50ffa5e666d1c454493afdceef5ad06393c84ce6a0d473a39833"
 
 [metadata.files]
 absl-py = [
@@ -3225,8 +3234,8 @@ pure-eval = [
     {file = "pure_eval-0.2.2.tar.gz", hash = "sha256:2b45320af6dfaa1750f543d714b6d1c520a1688dec6fd24d339063ce0aaa9ac3"},
 ]
 pyapes = [
-    {file = "pyapes-0.2.1-py3-none-any.whl", hash = "sha256:4821a1e3b8ead0ace0ddb34161c494c7667363d310ca16b59ab3164061d35f43"},
-    {file = "pyapes-0.2.1.tar.gz", hash = "sha256:eb8cb2a48d69b9ff4aa74f2d28579f5b5fcead5657b3900da4b78c25a7ba6acf"},
+    {file = "pyapes-0.2.8-py3-none-any.whl", hash = "sha256:67c6350a6412adbc08aa3d088a357ff3e7a2cbcddbe3b2288fee7c87880e070e"},
+    {file = "pyapes-0.2.8.tar.gz", hash = "sha256:d38ec5dab89086f245216e16f8ccec4dccfa27838060121a4a99f9dd72ccac1f"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.py3-none-any.whl", hash = "sha256:39c7e2ec30515947ff4e87fb6f456dfc6e84857d34be479c9d4a4ba4bf46aa5d"},
@@ -3257,8 +3266,8 @@ pymyplot = [
     {file = "pymyplot-0.2.7.tar.gz", hash = "sha256:bd5391237e59f7869db1b585ea084720121514076d90f6af49f0b233ec4556e6"},
 ]
 pymytools = [
-    {file = "pymytools-0.1.13-py3-none-any.whl", hash = "sha256:4dbf5a872b6ef49d6667be20cc9f23dc8c980954e082d6eb593a431469686719"},
-    {file = "pymytools-0.1.13.tar.gz", hash = "sha256:fd49d846308d9b44c1c6df8c231fc1c496558766ef517bce51bc47c0f5149b74"},
+    {file = "pymytools-0.1.15-py3-none-any.whl", hash = "sha256:7eff068e82dde30a15340d73840d41204aaaf6f22fa62969ab2b430804561fb7"},
+    {file = "pymytools-0.1.15.tar.gz", hash = "sha256:491c7d0c81036035574c51c35464359c9ab78820741a936c95cb920f88e427ad"},
 ]
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
@@ -3520,6 +3529,15 @@ setuptools = [
 setuptools-scm = [
     {file = "setuptools_scm-7.1.0-py3-none-any.whl", hash = "sha256:73988b6d848709e2af142aa48c986ea29592bbcfca5375678064708205253d8e"},
     {file = "setuptools_scm-7.1.0.tar.gz", hash = "sha256:6c508345a771aad7d56ebff0e70628bf2b0ec7573762be9960214730de278f27"},
+]
+simpleaudio = [
+    {file = "simpleaudio-1.0.4-cp37-cp37m-macosx_10_6_intel.whl", hash = "sha256:05b63da515f5fc7c6f40e4d9673d22239c5e03e2bda200fc09fd21c185d73713"},
+    {file = "simpleaudio-1.0.4-cp37-cp37m-win32.whl", hash = "sha256:f1a4fe3358429b2ea3181fd782e4c4fff5c123ca86ec7fc29e01ee9acd8a227a"},
+    {file = "simpleaudio-1.0.4-cp37-cp37m-win_amd64.whl", hash = "sha256:86f1b0985629852afe67259ac6c24905ca731cb202a6e96b818865c56ced0c27"},
+    {file = "simpleaudio-1.0.4-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:f68820297ad51577e3a77369e7e9b23989d30d5ae923bf34c92cf983c04ade04"},
+    {file = "simpleaudio-1.0.4-cp38-cp38-win32.whl", hash = "sha256:67348e3d3ccbae73bd126beed7f1e242976889620dbc6974c36800cd286430fc"},
+    {file = "simpleaudio-1.0.4-cp38-cp38-win_amd64.whl", hash = "sha256:f346a4eac9cdbb1b3f3d0995095b7e86c12219964c022f4d920c22f6ca05fb4c"},
+    {file = "simpleaudio-1.0.4.tar.gz", hash = "sha256:691c88649243544db717e7edf6a9831df112104e1aefb5f6038a5d071e8cf41d"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},

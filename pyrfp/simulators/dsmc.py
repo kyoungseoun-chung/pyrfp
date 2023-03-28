@@ -7,22 +7,42 @@ It includes
     - FP
 """
 import torch
-from pymytools.constants import EPS0
 from pymytools.constants import PI
 from torch import Tensor
+from math import ceil, sqrt
 
 
-def binary_nanbu(
-    vel_a: torch.Tensor,
-    vel_b: torch.Tensor,
-    m_a: float,
-    m_b: float,
-    q_a: float,
-    q_b: float,
-    n_b: float,
-    ln_lambda: float,
-    dt: float,
-) -> tuple[torch.Tensor, torch.Tensor]:
+def dsmc_nanbu_homogeneous(p_vel: Tensor, dt: float) -> Tensor:
+    """Homogeneous relaxation using the Nanbu's DSMC method."""
+
+    n_part = p_vel.shape[0]
+    # number of collision pair
+    # if number of particles in a cell is odd number,
+    # n_pair*2 is larger than number of particles
+    n_pair = int(ceil(n_part / 2))
+
+    idx_shuffle = torch.randperm(n_part)
+    # pair selection
+    pair_a = p_vel[idx_shuffle[:n_pair], :].clone()
+    pair_b = p_vel[idx_shuffle[n_pair:], :].clone()
+
+    vel_buffer = torch.zeros_like(p_vel)
+
+    assert (
+        pair_a.shape[0] == pair_b.shape[0]
+    ), "DSMC: homogeneous case should come with even number of particles."
+
+    # collide particle according to K.Nanbu (1997)
+    binary_collision(pair_a, pair_b, dt)
+
+    # update velocity
+    vel_buffer[idx_shuffle[:n_pair], :] = pair_a
+    vel_buffer[idx_shuffle[n_pair:], :] = pair_b
+
+    return vel_buffer
+
+
+def binary_collision(vel_a: Tensor, vel_b: Tensor, dt: float) -> tuple[Tensor, Tensor]:
     """Collision according to elastic and binary collision."""
 
     dim = vel_a.size(0)
@@ -34,16 +54,7 @@ def binary_nanbu(
     g_mag = torch.sqrt(torch.sum(g**2, dim=1))
     g_perp = torch.sqrt(g[:, 1] * g[:, 1] + g[:, 2] * g[:, 2])
 
-    mu = m_a * m_b / (m_a + m_b)
-
-    s = (
-        ln_lambda
-        / (4 * PI)
-        * ((q_a * q_b / (EPS0 * mu)) ** 2)
-        * n_b
-        / (g_mag**3)
-        * dt
-    )
+    s = 8.0 * sqrt(2.0) / (g_mag**3) * dt
 
     cos_xi = _nanbu_scattering(s)
     sin_xi = torch.sqrt(1 - cos_xi**2)
@@ -62,8 +73,8 @@ def binary_nanbu(
         / g_perp
     )
 
-    vel_a -= mu / m_a * (g * (1 - cos_xi.view(dim, 1)) + h * sin_xi.view(dim, 1))
-    vel_b += mu / m_a * (g * (1 - cos_xi.view(dim, 1)) + h * sin_xi.view(dim, 1))
+    vel_a -= 0.5 * (g * (1 - cos_xi.view(dim, 1)) + h * sin_xi.view(dim, 1))
+    vel_b += 0.5 * (g * (1 - cos_xi.view(dim, 1)) + h * sin_xi.view(dim, 1))
 
     return (vel_a, vel_b)
 

@@ -34,7 +34,8 @@ from math import pi
 import pymaxed
 import torch
 from pyapes.mesh import Mesh
-from pyapes.solver.fdc import ScalarOP
+from pyapes.solver.fdc import hessian
+from pyapes.solver.fdc import jacobian
 from pyapes.solver.fdm import FDM
 from pyapes.solver.ops import Solver
 from pyapes.solver.tools import FDMSolverConfig
@@ -190,7 +191,7 @@ class RosenbluthPotentials_RZ:
             "🔥Done in " + markup(f"{self.timer.elapsed('H_bc'):.2f} s", "blue")
         )
 
-        bc_H = _set_bc_rz(bc_vals)
+        bc_H = set_bc_rz(bc_vals)
         H_pot = Field("H", 1, self.mesh, {"domain": bc_H(), "obstacle": None})
 
         logging.info(markup("Solving H potential...", "yellow"))
@@ -211,7 +212,7 @@ class RosenbluthPotentials_RZ:
             "🔥Done in " + markup(f"{self.timer.elapsed('G_bc'):.2f} s", "blue")
         )
 
-        bc_G = _set_bc_rz(bc_vals)
+        bc_G = set_bc_rz(bc_vals)
         G_pot = Field("G", 1, self.mesh, {"domain": bc_G(), "obstacle": None})
 
         logging.info(markup("Solving G potential...", "yellow"))
@@ -243,10 +244,10 @@ class RosenbluthPotentials_RZ:
         return {
             "pots": {
                 "H": H_pot()[0],
-                "jacH": ScalarOP.jac(var.set_var_tensor(H_pot[0])),
+                "jacH": jacobian(var.set_var_tensor(H_pot[0])),
                 "G": G_pot()[0],
-                "jacG": ScalarOP.jac(var.set_var_tensor(G_pot[0])),
-                "hessG": ScalarOP.hess(var.set_var_tensor(G_pot[0])),
+                "jacG": jacobian(var.set_var_tensor(G_pot[0])),
+                "hessG": hessian(var.set_var_tensor(G_pot[0])),
                 "pdf": pdf[0],
             },
             "success": h_success & g_success,
@@ -275,7 +276,7 @@ def get_analytic_bcs(
     return bcs
 
 
-def _set_bc_rz(vals: dict[str, Tensor]) -> CylinderBoundary:
+def set_bc_rz(vals: dict[str, Tensor]) -> CylinderBoundary:
     return CylinderBoundary(
         rl={"bc_type": "neumann", "bc_val": 0.0},
         ru={"bc_type": "dirichlet", "bc_val": vals["ru"]},
