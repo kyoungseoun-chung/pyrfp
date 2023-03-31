@@ -3,22 +3,9 @@
 import torch
 from pyapes.geometry import Cylinder
 from pyapes.mesh import Mesh
-from pyapes.solver.fdc import FDC
-from pyapes.solver.fdc import hessian
-from pyapes.solver.fdc import jacobian
-from pyapes.solver.fdm import FDM
-from pyapes.solver.ops import Solver
-from pyapes.variables import Field
-from pymaxed.maxed import Maxed
-from pymaxed.maxed import Vec
 from pymyplot import plt
-from pymyplot.colors import TOLCmap
 from pymytools.constants import PI
 from scipy.stats import skewnorm
-from torch.testing import assert_close
-
-from pyrfp.training_data import get_analytic_bcs
-from pyrfp.training_data import set_bc_rz
 
 
 def test_dsmc_homogeneous() -> None:
@@ -53,7 +40,7 @@ def test_dsmc_homogeneous() -> None:
 
 
 def test_rfp() -> None:
-    mesh = Mesh(Cylinder[0:5, -5:5], None, [32, 64])
+    mesh = Mesh(Cylinder[0:5, -5:5], None, [256, 512])
 
     dist = 1.0 / (2.0 * PI) ** 1.5 * torch.exp(-0.5 * (mesh.R**2 + mesh.Z**2))
 
@@ -62,7 +49,7 @@ def test_rfp() -> None:
 
     from pyrfp.simulators.rfp import RFP_RZ
 
-    rfp_rz = RFP_RZ(mesh, 0.01, 100, dist)
+    rfp_rz = RFP_RZ(mesh, 0.0001, 10, dist)
     pdf_final = rfp_rz.run()
 
     _, ax = plt.subplots(1, 2)
