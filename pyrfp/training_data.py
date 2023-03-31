@@ -83,7 +83,7 @@ class RosenbluthPotentials_RZ:
 
         self.timer = Timer()
 
-    def from_moments(self, mnts: Tensor) -> PotentialReturnType:
+    def from_moments(self, mnts: Tensor, disp: bool = True) -> PotentialReturnType:
         """From moment, obtain the maximum entropy distribution (maxed)"""
 
         assert (
@@ -101,15 +101,17 @@ class RosenbluthPotentials_RZ:
                 "italic",
             )
             + f" (pymaxed v {pymaxed.__version__})"
-        )
-        logging.info("Target moment: " + markup(f" {mnts}", "blue"))
+        ) if disp else None
+        logging.info("Target moment: " + markup(f" {mnts}", "blue")) if disp else None
         logging.info(
             "Domain: "
             + markup(
                 f" {self.mesh.lower.tolist()} x {self.mesh.upper.tolist()}", "blue"
             )
-        )
-        logging.info("Grid: " + markup(f" {list(self.mesh.nx)}", "blue"))
+        ) if disp else None
+        logging.info(
+            "Grid: " + markup(f" {list(self.mesh.nx)}", "blue")
+        ) if disp else None
 
         vec = Vec(self.mesh, mnts, 4, [50, 100])
         maxed = Maxed(
@@ -121,13 +123,13 @@ class RosenbluthPotentials_RZ:
             disp=False,
         )
 
-        logging.info(markup("Solving for MaxEd...", "yellow"))
+        logging.info(markup("Solving for MaxEd...", "yellow")) if disp else None
         self.timer.start("maxed")
         maxed.solve()
         self.timer.end("maxed")
         logging.info(
             "🔥Done in " + markup(f"{self.timer.elapsed('maxed'):.2f} s", "blue")
-        )
+        ) if disp else None
         if not maxed.success:
             return {"pots": None, "success": False, "timer": None}
 
@@ -140,9 +142,60 @@ class RosenbluthPotentials_RZ:
         density = torch.sum(2.0 * torch.pi * self.mesh.grid[0] * pdf) * dr * dz
         pdf /= density
 
-        return self.from_pdf(pdf)
+        return self.from_pdf(pdf, disp)
 
-    def from_pdf(self, pdf: Tensor) -> PotentialReturnType:
+    def from_analytic(self, pdf: Tensor, disp: bool = True) -> PotentialReturnType:
+        if pdf.shape[0] != 1 or pdf.shape == self.mesh.nx:
+            pdf = pdf.unsqueeze(0)
+
+        logging.info(
+            markup(
+                f"🚀 Computing Rosenbluth potentials 🚀",
+                "red",
+                "italic",
+            )
+            + f" (pyrfp v {__version__})"
+        ) if disp else None
+        logging.info(
+            "Domain: "
+            + markup(
+                f" {self.mesh.lower.tolist()} x {self.mesh.upper.tolist()}", "blue"
+            )
+        ) if disp else None
+        logging.info(
+            "Grid: " + markup(f" {list(self.mesh.nx)}", "blue")
+        ) if disp else None
+
+        logging.info(
+            markup("Solving H potential analytically...", "yellow")
+        ) if disp else None
+        self.timer.start("aH_pot")
+        H_pot = analytic_potentials_rz_cpu(self.mesh.grid, self.mesh.grid, pdf, "H")
+        self.timer.end("aH_pot")
+
+        logging.info(
+            markup("Solving G potential analytically...", "yellow")
+        ) if disp else None
+        self.timer.start("aG_pot")
+        G_pot = analytic_potentials_rz_cpu(self.mesh.grid, self.mesh.grid, pdf, "G")
+        self.timer.end("aG_pot")
+
+        var = Field("container", 1, self.mesh, None)
+
+        return {
+            "pots": {
+                "H": H_pot,
+                "jacH": jacobian(var.set_var_tensor(H_pot)),
+                "G": G_pot,
+                "jacG": jacobian(var.set_var_tensor(G_pot)),
+                "hessG": hessian(var.set_var_tensor(G_pot)),
+                "pdf": pdf[0],
+            },
+            "success": True,
+            "timer": self.timer,
+        }
+
+    def from_pdf(self, pdf: Tensor, disp: bool = True) -> PotentialReturnType:
         """Compute the Rosenbluth potentials and their derivatives (Jacobian and Hessian) from the given PDF by solving the Poisson equation using the iterative solver (bicgstab scheme).
 
         Args:
@@ -175,54 +228,60 @@ class RosenbluthPotentials_RZ:
                 "italic",
             )
             + f" (pyrfp v {__version__})"
-        )
+        ) if disp else None
         logging.info(
             "Domain: "
             + markup(
                 f" {self.mesh.lower.tolist()} x {self.mesh.upper.tolist()}", "blue"
             )
-        )
-        logging.info("Grid: " + markup(f" {list(self.mesh.nx)}", "blue"))
-        logging.info(markup("Evaluating H potential boundary...", "yellow"))
+        ) if disp else None
+        logging.info(
+            "Grid: " + markup(f" {list(self.mesh.nx)}", "blue")
+        ) if disp else None
+        logging.info(
+            markup("Evaluating H potential boundary...", "yellow")
+        ) if disp else None
         self.timer.start("H_bc")
         bc_vals = get_analytic_bcs(self.mesh, pdf[0], "H")
         self.timer.end("H_bc")
         logging.info(
             "🔥Done in " + markup(f"{self.timer.elapsed('H_bc'):.2f} s", "blue")
-        )
+        ) if disp else None
 
         bc_H = set_bc_rz(bc_vals)
         H_pot = Field("H", 1, self.mesh, {"domain": bc_H(), "obstacle": None})
 
-        logging.info(markup("Solving H potential...", "yellow"))
+        logging.info(markup("Solving H potential...", "yellow")) if disp else None
         self.timer.start("H_pot")
         solver.set_eq(fdm.laplacian(H_pot) == -8 * pi * pdf)
         solver.solve()
         self.timer.end("H_pot")
         logging.info(
             "🔥Done in " + markup(f"{self.timer.elapsed('H_pot'):.2f} s", "blue")
-        )
+        ) if disp else None
         h_success = solver.report["converge"]
 
-        logging.info(markup("Evaluating G potential boundary...", "yellow"))
+        logging.info(
+            markup("Evaluating G potential boundary...", "yellow")
+        ) if disp else None
         self.timer.start("G_bc")
         bc_vals = get_analytic_bcs(self.mesh, pdf[0], "G")
         self.timer.end("G_bc")
         logging.info(
             "🔥Done in " + markup(f"{self.timer.elapsed('G_bc'):.2f} s", "blue")
-        )
+        ) if disp else None
 
         bc_G = set_bc_rz(bc_vals)
         G_pot = Field("G", 1, self.mesh, {"domain": bc_G(), "obstacle": None})
 
-        logging.info(markup("Solving G potential...", "yellow"))
+        logging.info(markup("Solving G potential...", "yellow")) if disp else None
         self.timer.start("G_pot")
         solver.set_eq(fdm.laplacian(G_pot) == H_pot())
         solver.solve()
         self.timer.end("G_pot")
         logging.info(
             "🔥Done in " + markup(f"{self.timer.elapsed('G_pot'):.2f} s", "blue")
-        )
+        ) if disp else None
         g_success = solver.report["converge"]
 
         logging.info(
@@ -236,8 +295,8 @@ class RosenbluthPotentials_RZ:
                 f"{'successful' if g_success else 'fail'}",
                 "green" if g_success else "red",
             )
-        )
-        logging.info(markup("🎉 Finish! 🎉 ", "red"))
+        ) if disp else None
+        logging.info(markup("🎉 Finish! 🎉 ", "red")) if disp else None
 
         var = Field("container", 1, self.mesh, None)
 

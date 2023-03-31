@@ -49,7 +49,7 @@ def test_rfp() -> None:
 
     from pyrfp.simulators.rfp import RFP_RZ
 
-    rfp_rz = RFP_RZ(mesh, 0.0001, 10, dist)
+    rfp_rz = RFP_RZ(mesh, dist, 0.0001, 10)
     pdf_final = rfp_rz.run()
 
     _, ax = plt.subplots(1, 2)

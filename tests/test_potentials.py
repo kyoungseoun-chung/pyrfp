@@ -287,6 +287,6 @@ def test_potential_field_solver() -> None:
             "report": False,
         },
     )
-    res = RP_rz.from_pdf(pdf)
-    t_H = analytic_potentials_rz(mesh.grid, mesh.grid, pdf, "H")
-    t_G = analytic_potentials_rz(mesh.grid, mesh.grid, pdf, "G")
+    res_sol = RP_rz.from_pdf(pdf)
+    res_analytic = RP_rz.from_analytic(pdf)
+    pass
