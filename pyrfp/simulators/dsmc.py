@@ -6,10 +6,12 @@ It includes
         - I rewrote here (from `pystops`) since I want this package to be decoupled from `pystops`
     - FP
 """
+from math import ceil
+from math import sqrt
+
 import torch
 from pymytools.constants import PI
 from torch import Tensor
-from math import ceil, sqrt
 
 
 def dsmc_nanbu_homogeneous(p_vel: Tensor, dt: float) -> Tensor:
