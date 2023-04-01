@@ -144,7 +144,14 @@ class RosenbluthPotentials_RZ:
 
         return self.from_pdf(pdf, disp)
 
-    def from_analytic(self, pdf: Tensor, disp: bool = True) -> PotentialReturnType:
+    def from_analytic(
+        self, pdf: Tensor, disp: bool = True, low_mem: bool = False
+    ) -> PotentialReturnType:
+        if low_mem:
+            analytic_pot = analytic_potentials_rz_cpu_low_mem
+        else:
+            analytic_pot = analytic_potentials_rz_cpu
+
         if pdf.shape[0] != 1 or pdf.shape == self.mesh.nx:
             pdf = pdf.unsqueeze(0)
 
@@ -170,14 +177,14 @@ class RosenbluthPotentials_RZ:
             markup("Solving H potential analytically...", "yellow")
         ) if disp else None
         self.timer.start("aH_pot")
-        H_pot = analytic_potentials_rz_cpu(self.mesh.grid, self.mesh.grid, pdf, "H")
+        H_pot = analytic_pot(self.mesh.grid, self.mesh.grid, pdf, "H")
         self.timer.end("aH_pot")
 
         logging.info(
             markup("Solving G potential analytically...", "yellow")
         ) if disp else None
         self.timer.start("aG_pot")
-        G_pot = analytic_potentials_rz_cpu(self.mesh.grid, self.mesh.grid, pdf, "G")
+        G_pot = analytic_pot(self.mesh.grid, self.mesh.grid, pdf, "G")
         self.timer.end("aG_pot")
 
         var = Field("container", 1, self.mesh, None)
