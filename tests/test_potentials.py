@@ -99,7 +99,11 @@ def rayleigh_pdf(grid: tuple[Tensor, ...]) -> Tensor:
 
 
 def test_potentials() -> None:
-    from pyrfp.training_data import analytic_potentials_rz, analytic_potentials_rz_cpu
+    from pyrfp.training_data import (
+        analytic_potentials_rz,
+        analytic_potentials_rz_cpu,
+        analytic_potentials_rz_cpu_low_mem,
+    )
 
     nx = 5
     ny = 10
@@ -124,6 +128,11 @@ def test_potentials() -> None:
     t_G_cpu = analytic_potentials_rz_cpu(grid, grid, pdf, "G")
     t_torch_cpu = time.perf_counter() - tic
 
+    tic = time.perf_counter()
+    t_H_cpu_low_mem = analytic_potentials_rz_cpu_low_mem(grid, grid, pdf, "H")
+    t_G_cpu_low_mem = analytic_potentials_rz_cpu_low_mem(grid, grid, pdf, "G")
+    t_torch_cpu_low_mem = time.perf_counter() - tic
+
     assert_close(torch.from_numpy(np_H).to(dtype=t_H.dtype, device=t_H.device), t_H)
     assert_close(torch.from_numpy(np_G).to(dtype=t_G.dtype, device=t_G.device), t_G)
 
@@ -134,9 +143,18 @@ def test_potentials() -> None:
         torch.from_numpy(np_G).to(dtype=t_G_cpu.dtype, device=t_G_cpu.device), t_G_cpu
     )
 
+    assert_close(
+        torch.from_numpy(np_H).to(dtype=t_H_cpu.dtype, device=t_H_cpu.device),
+        t_H_cpu_low_mem,
+    )
+    assert_close(
+        torch.from_numpy(np_G).to(dtype=t_G_cpu.dtype, device=t_G_cpu.device),
+        t_G_cpu_low_mem,
+    )
+
     data = {
-        "Scheme": ["Naive", "Vectorized", "CPU only"],
-        "Elapsed Time (s)": [t_naive, t_torch, t_torch_cpu],
+        "Scheme": ["Naive", "Vectorized", "CPU only", "CPU only (low mem)"],
+        "Elapsed Time (s)": [t_naive, t_torch, t_torch_cpu, t_torch_cpu_low_mem],
     }
 
     table = Report("Computational Costs", data, style=["green", "red"])

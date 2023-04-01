@@ -344,6 +344,71 @@ def set_bc_rz(vals: dict[str, Tensor]) -> CylinderBoundary:
     )
 
 
+def analytic_potentials_rz_cpu_low_mem(
+    target: tuple[Tensor, ...], grid: tuple[Tensor, ...], pdf: Tensor, potential: str
+) -> Tensor:
+    """Slow but low memory version of `analytic_potentials_rz_cpu`."""
+
+    pot = torch.zeros_like(target[0])
+    ur = grid[0]
+    uz = grid[1]
+
+    hr = ur[1, 0] - ur[0, 0]
+    hz = uz[0, 1] - uz[0, 0]
+
+    # What if target[0].shape = torch.Size([64]) and grid[0].shape = torch.Size([64, 128])?
+    # I need to make 64 x 1 x (64 * 128)
+    ur_target = target[0]
+    uz_target = target[1]
+
+    nr = ur_target.shape[0]
+    nz = uz_target.shape[1]
+
+    ur = ur.flatten()
+    uz = uz.flatten()
+    pdf = pdf.flatten()
+
+    for i in range(nr):
+        for j in range(nz):
+            # Target velocities
+            ur_t = ur_target[i, j]
+            uz_t = uz_target[i, j]
+            inner = (ur_t + ur) ** 2 + (uz_t - uz) ** 2
+            k = 4 * ur_t * ur / inner
+
+            if potential.lower() == "h":
+                ek = s_ellipk(k.to(device=torch.device("cpu"))).to(
+                    device=ur.device, dtype=ur.dtype
+                )
+                ek[k.eq(1.0)] = 0.0
+
+                pot[i, j] = torch.sum(
+                    torch.nan_to_num(
+                        8 * ur * pdf * ek / torch.sqrt(inner) * hr * hz,
+                        nan=0.0,
+                        posinf=0.0,
+                        neginf=0.0,
+                    )
+                )
+            elif potential.lower() == "g":
+                ee = s_ellipe(k.to(device=torch.device("cpu"))).to(
+                    device=ur.device, dtype=ur.dtype
+                )
+                ee[k.eq(1.0)] = 0.0
+                pot[i, j] = torch.sum(
+                    torch.nan_to_num(
+                        4 * ur * pdf * ee * torch.sqrt(inner) * hr * hz,
+                        nan=0.0,
+                        posinf=0.0,
+                        neginf=0.0,
+                    )
+                )
+            else:
+                raise ValueError("Potential must be either H or G")
+
+    return pot
+
+
 def analytic_potentials_rz_cpu(
     target: tuple[Tensor, ...], grid: tuple[Tensor, ...], pdf: Tensor, potential: str
 ) -> Tensor:
@@ -358,7 +423,7 @@ def analytic_potentials_rz_cpu(
     hr = ur[1, 0] - ur[0, 0]
     hz = uz[0, 1] - uz[0, 0]
 
-    # What if target[0].shape = torch.Size([64]) and grid[0].shape = torch.Size([64, 128?
+    # What if target[0].shape = torch.Size([64]) and grid[0].shape = torch.Size([64, 128])?
     # I need to make 64 x 1 x (64 * 128)
     ur_target = target[0].flatten().unsqueeze(1).repeat(1, ur.numel())
     uz_target = target[1].flatten().unsqueeze(1).repeat(1, ur.numel())
